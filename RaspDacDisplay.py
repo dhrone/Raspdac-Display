@@ -39,7 +39,7 @@ class RaspDac_Display:
 		# Initilize the connections to the music Daemons.  Currently supporting
 		# MPD and SPOP (for Spotify)
 
-		ATTEMPTS=10
+		ATTEMPTS=6
 		# Will try to connect multiple times
 
 		for i in range (1,ATTEMPTS):
@@ -60,10 +60,12 @@ class RaspDac_Display:
 			raise
 
 		# Now attempting to connect to the Spotify daemon
+		# This may fail if Spotify is not configured.  That's ok!
 		for i in range (1,ATTEMPTS):
 			try:
 				self.spotclient = telnetlib.Telnet("localhost",6602)
 				self.spotclient.read_until("\n")
+				self.spotifyenabled=True
 				break
 			except:
 				logging.warning("Connection to Spotify service attempt " + str(i) + " failed")
@@ -71,9 +73,9 @@ class RaspDac_Display:
 		else:
 			# After the alloted number of attempts did not succeed in connecting
 			logging.critical("Unable to connect to Spotify service")
+			# Exit with spotify marked as not running
+			self.spotifyenabled = False
 
-			# Passing Exception on to calling routine which will likely exit
-			raise
 
 
 
@@ -105,31 +107,34 @@ class RaspDac_Display:
 		  return { 'state':state, 'artist':artist, 'title':title, 'current':current, 'duration': duration }
 		else :
 
-		  # Try SPOT if MPD is not playing
-		  self.spotclient.write("status\n")
-		  spot_status_string = self.spotclient.read_until("\n").strip()
-		  spot_status = json.loads(spot_status_string)
-		  if spot_status.get('status') == "playing":
-			artist = spot_status.get('artist')
-			title = spot_status.get('title')
-			current = spot_status.get('position')
-			duration = spot_status.get('duration')
+		  # Try SPOP if MPD is not playing (only if SPOP was running at startup)
+		  if self.spotifyenabled:
+			  self.spotclient.write("status\n")
+			  spot_status_string = self.spotclient.read_until("\n").strip()
+			  spot_status = json.loads(spot_status_string)
+			  if spot_status.get('status') == "playing":
+				artist = spot_status.get('artist')
+				title = spot_status.get('title')
+				current = spot_status.get('position')
+				duration = spot_status.get('duration')
 
-		  	# since we are returning the info as a JSON formatted return, convert
-		  	# any None's into reasonable values
+			  	# since we are returning the info as a JSON formatted return, convert
+			  	# any None's into reasonable values
 
-			if artist is None: artist = ""
-			if title is None: title = ""
-			if current is None: current = 0
-			if duration is None:
-				duration = 0
-			else:
-				# The spotify client returns time in 1000's of a second
-				# Need to adjust to seconds to be consistent with MPD
-				duration = duration / 1000
+				if artist is None: artist = ""
+				if title is None: title = ""
+				if current is None: current = 0
+				if duration is None:
+					duration = 0
+				else:
+					# The spotify client returns time in 1000's of a second
+					# Need to adjust to seconds to be consistent with MPD
+					duration = duration / 1000
 
-			return { 'state':"play", 'artist':artist, 'title':title, 'current':current, 'duration': duration }
-		  else :
+				return { 'state':"play", 'artist':artist, 'title':title, 'current':current, 'duration': duration }
+			  else:
+				return { 'state':"stop" }
+		  else:
 			return { 'state':"stop" }
 
 
@@ -362,8 +367,9 @@ if __name__ == '__main__':
 		q.put(["Goodbye!",""])
 		logging.info("Goodbye!")
 		rd.client.disconnect()
-		rd.spotclient.write("bye\n")
-		rd.spotclient.close()
+		if rd.spotifyenabled:
+			rd.spotclient.write("bye\n")
+			rd.spotclient.close()
 		time.sleep(2)
 		q.put(["",""])
 		time.sleep(1)
