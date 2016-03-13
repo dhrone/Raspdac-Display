@@ -35,6 +35,24 @@ exit 0
     * ARTIST_TIME - Sets the amount of time in seconds the artist's name will display before switching to the title
     * TITLE_TIME - Sets the amount of time in seconds the title will display before switching to the artist's name
     * HESITATION_TIME - Titles or artists which are wider than the display width get scrolled.  This variable sets how long the display should pause in seconds before the scrolling begins
+    * TIMEZONE - Sets what timezone should be used when displaying the current system time.  Possible values can be found in the /usr/share/zoneinfo directory. Examples...
+     ```
+     New York City.  TIMEZONE="US/Eastern"
+     San Francisco.  TIMEZONE="US/Pacific"
+     Paris.  TIMEZONE = "Europe/Paris"
+     ```
+    
+  * The program relies upon two python packages that are not installed by default on the Volumio 1.55 distribution.  These are moment and python-mpd.  They are most easily installed using the Python Package Manager (PIP). If you do not have pip installed you can add it using the following command.
+   ```
+   apt-get install python-setuptools && easy_install pip
+   ```
+  * With PIP installed you can install moment and python-mpd with the following commands.
+   ```
+   pip install moment
+   pip install python-mpd
+   ```
+  
+   
     
 ## Usage
 
