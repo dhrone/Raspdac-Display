@@ -77,14 +77,16 @@ class RaspDac_Display:
 			self.spotifyenabled = False
 
 
+	def status_mpd(self):
+		# Try to get status from MPD daemon
 
+		try:
+			m_status = self.client.status()
+			m_currentsong = self.client.currentsong()
+		except:
+			logging.warning("Could not get status from MPD daemon")
+			return { 'state':"stop", 'artist':"", 'title':"", 'current':0, 'duration':0 }
 
-	def status(self):
-		# Try MPD daemon first
-		m_status = self.client.status()
-		m_currentsong = self.client.currentsong()
-
-		# Get the MPD player state and act accordingly
 		state = m_status.get('state')
 		if state == "play":
 		  artist = m_currentsong.get('artist')
@@ -105,37 +107,64 @@ class RaspDac_Display:
 		  if current is None: current = 0
 		  if duration is None: duration = 0
 		  return { 'state':state, 'artist':artist, 'title':title, 'current':current, 'duration': duration }
-		else :
+	  	else:
+		  return { 'state':"stop", 'artist':"", 'title':"", 'current':0, 'duration':0 }
 
-		  # Try SPOP if MPD is not playing (only if SPOP was running at startup)
-		  if self.spotifyenabled:
-			  self.spotclient.write("status\n")
-			  spot_status_string = self.spotclient.read_until("\n").strip()
-			  spot_status = json.loads(spot_status_string)
-			  if spot_status.get('status') == "playing":
-				artist = spot_status.get('artist')
-				title = spot_status.get('title')
-				current = spot_status.get('position')
-				duration = spot_status.get('duration')
+	def status_spop(self):
+		# Try to get status from SPOP daemon
 
-			  	# since we are returning the info as a JSON formatted return, convert
-			  	# any None's into reasonable values
+		try:
+			self.spotclient.write("status\n")
+			spot_status_string = self.spotclient.read_until("\n").strip()
+		except:
+			logging.warning("Could not get status from SPOP daemon")
+			return { 'state':"stop", 'artist':"", 'title':"", 'current':0, 'duration':0 }
 
-				if artist is None: artist = ""
-				if title is None: title = ""
-				if current is None: current = 0
-				if duration is None:
-					duration = 0
-				else:
-					# The spotify client returns time in 1000's of a second
-					# Need to adjust to seconds to be consistent with MPD
-					duration = duration / 1000
+		spot_status = json.loads(spot_status_string)
 
-				return { 'state':"play", 'artist':artist, 'title':title, 'current':current, 'duration': duration }
-			  else:
-				return { 'state':"stop" }
-		  else:
-			return { 'state':"stop" }
+	  	if spot_status.get('status') == "playing":
+			artist = spot_status.get('artist')
+			title = spot_status.get('title')
+			current = spot_status.get('position')
+			duration = spot_status.get('duration')
+
+		  	# since we are returning the info as a JSON formatted return, convert
+		  	# any None's into reasonable values
+
+			if artist is None: artist = ""
+			if title is None: title = ""
+			if current is None: current = 0
+			if duration is None:
+				duration = 0
+			else:
+				# The spotify client returns time in 1000's of a second
+				# Need to adjust to seconds to be consistent with MPD
+				duration = duration / 1000
+
+			return { 'state':"play", 'artist':artist, 'title':title, 'current':current, 'duration': duration }
+	  	else:
+			return { 'state':"stop", 'artist':"", 'title':"", 'current':0, 'duration':0 }
+
+
+	def status(self):
+
+		# Try MPD daemon first
+		status = self.status_mpd()
+
+		# If MPD is stopped
+		if status.get('state') != "play":
+
+			# and SPOP is running
+			if self.spotifyenabled is True:
+
+				# Try the SPOP daemon
+				status = self.status_spop()
+
+		#status['artist'] = status['artist'].encode("utf-8")
+		#status['title'] = status['title'].encode("utf-8")
+
+		return status
+
 
 
 def Display(q, l, c):
@@ -166,6 +195,8 @@ def Display(q, l, c):
   lcd.clear()
 
   for i in range(len(item)):
+	# Convert from Unicode to UTF-8
+	#item[i] = item[i].encode("utf-8")
 	lines[i] = item[i]
 	lcd.setCursor(0,i)
 	lcd.message( lines[i][0:c] )
@@ -181,6 +212,9 @@ def Display(q, l, c):
 	  try:
 		  # Determine if any lines have been udpated and if yes display them
 		  for i in range(len(item)):
+
+			  # Convert from Unicode into UTF-8
+			  #item[i] = item[i].encode("utf-8")
 			  # Check if line is longer than display
 			  if len(item[i])>c:
 				  short_lines = False
@@ -207,7 +241,8 @@ def Display(q, l, c):
 			  # Update all long lines
 			  for i in range(len(lines)):
 				  if len(lines[i])>c:
-				  	  buf = "{0:s}        {1:s}".format(lines[i],lines[i][0:DISPLAY_WIDTH-1])
+					  buf = "%s		%s" % (lines[i], lines[i][0:DISPLAY_WIDTH-1])
+				  	  #buf = "{}		{}".format(lines[i],lines[i][0:DISPLAY_WIDTH-1])
 					  #buf = lines[i]+"		  "+lines[i][0:c]
 
 					  columns[i] = columns[i]+1
@@ -305,11 +340,11 @@ if __name__ == '__main__':
 					logging.info(current_time + " (local): " + playing_song)
 					display_mode = "ARTIST"
 					display_etime = time.time()+ARTIST_TIME
-					if (len(str(artist))>DISPLAY_WIDTH):
+					if (len(artist)>DISPLAY_WIDTH):
 						hesitation_etime = time.time()+HESITATION_TIME
 						hesitate=True
 						display = artist[0:DISPLAY_WIDTH]
-					elif (len(str(artist)) > 0):
+					elif (len(artist) > 0):
 						display = artist
 					else:
 						display_etime = 0 # force artist display to be skipped if the field is empty
@@ -333,16 +368,16 @@ if __name__ == '__main__':
 					update_needed = True
 					if display_mode == "ARTIST":
 						display_etime = time.time() + TITLE_TIME
-						if len(str(title)) > 0:
+						if len(title) > 0:
 							display_mode = "TITLE"
 							display = title
 					else:
 						display_etime = time.time() + ARTIST_TIME
-						if len(str(artist)) > 0:
+						if len(artist) > 0:
 							display_mode = "ARTIST"
 							display = artist
 
-					if len(str(artist)) == 0 and len(str(title)) == 0:
+					if len(artist) == 0 and len(title) == 0:
 						# if neither artist and title contain values
 						display = "No song info"
 

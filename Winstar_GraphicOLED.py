@@ -91,6 +91,14 @@ class Winstar_GraphicOLED:
     LCD_5x10s = 0x04
     LCD_5x8DOTS = 0x00
 
+    character_translation = [ 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+                              32,33,34,35,36,37,38,39,30,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,
+                              64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,
+                              96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114,115,116,117,118,119,120,121,122,123,124,125,126,
+                              0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+                              32,33,204,179,198,32,32,176,209,221,32,215,32,32,220,32,210,177,32,32,211,200,188,32,32,32,210,216,227,226,229,143,152,
+                              152,65,203,153,65,32,196,145,146,144,147,73,73,73,73,194,166,136,137,135,206,79,88,201,129,130,128,131,89,254,195,156,
+                              157,155,205,158,97,32,196,149,150,148,151,162,163,161,164,111,167,140,141,139,207,142,214,192,133,134,132,117,121,250,202 ]
 
     def __init__(self):
         self.numlines=2
@@ -121,7 +129,7 @@ class Winstar_GraphicOLED:
         # there is a good writeup on the HD44780 at Wikipedia
         # https://en.wikipedia.org/wiki/Hitachi_HD44780_LCD_controller
 
-        self.delayMicroseconds(10000)
+        #self.delayMicroseconds(10000)
 
         # Assuming that the display may already be in 4 bit mode
         # send five 0000 instructions to resync the display
@@ -147,8 +155,8 @@ class Winstar_GraphicOLED:
         # From this point forward, we need to use write4bits function which
         # implements the two stage write that 4 bit mode requires
 
-        self.write4bits(0x28, False) # Function set for 4 bits, 2 lines and 5x8 font
         self.write4bits(0x08, False) # Turn display off
+        self.write4bits(0x29, False) # Function set for 4 bits, 2 lines, 5x8 font, Western European font table
         self.write4bits(0x06, False) # Entry Mode set to increment and no shift
         self.write4bits(0x17, False) # Set to char mode and turn on power
         self.write4bits(0x01, False) # Clear display and reset cursor
@@ -253,7 +261,7 @@ class Winstar_GraphicOLED:
     def writeonly4bits(self, bits, char_mode=False):
         if bits > 15: return
 
-        self.delayMicroseconds(1000)
+        #self.delayMicroseconds(1000)
         bits = bin(bits)[2:].zfill(4)
 
         GPIO.output(self.pin_rs, char_mode)
@@ -270,7 +278,7 @@ class Winstar_GraphicOLED:
     def write4bits(self, bits, char_mode=False):
         ''' Send command to LCD '''
 
-        self.delayMicroseconds(1000) # 1000 microsecond sleep
+        #self.delayMicroseconds(1000) # 1000 microsecond sleep
 
         bits = bin(bits)[2:].zfill(8)
 
@@ -312,7 +320,7 @@ class Winstar_GraphicOLED:
 
 
     def delayMicroseconds(self, microseconds):
-        seconds = microseconds / 1000000 # divide microseconds by 1 million for seconds
+        seconds = microseconds / 1000000.0 # divide microseconds by 1 million for seconds
         time.sleep(seconds)
 
 
@@ -322,24 +330,29 @@ class Winstar_GraphicOLED:
         # with a 100 post time for setting
 
         GPIO.output(self.pin_e, False)
-        self.delayMicroseconds(1000) # 1 microsecond pause - enable pulse must be > 450ns
+        self.delayMicroseconds(.1) # 1 microsecond pause - enable pulse must be > 450ns
         GPIO.output(self.pin_e, True)
-        self.delayMicroseconds(500) # 1 microsecond pause - enable pulse must be > 450ns
+        self.delayMicroseconds(.1) # 1 microsecond pause - enable pulse must be > 450ns
+        #time.sleep(0.000000001)
         GPIO.output(self.pin_e, False)
-        self.delayMicroseconds(1000) # commands need > 37us to settle
+        #self.delayMicroseconds(10) # commands need > 37us to settle
 
 
     def message(self, text):
         ''' Send string to LCD. Newline wraps to second line'''
 
-        #self.resyncDisplay()
-        time.sleep(.000001)
         for char in text:
             if char == '\n':
                 self.write4bits(0xC0) # next line
+
             else:
                 #time.sleep(.000001)
-                self.write4bits(ord(char), True)
+
+                # Translate incoming character into correct value for European charset
+                # and then send it to display.  Use space if character is out of range.
+                c = ord(char)
+                if c > 255: c = 32
+                self.write4bits(self.character_translation[c], True)
 
 
 if __name__ == '__main__':
@@ -353,21 +366,16 @@ if __name__ == '__main__':
 
     lcd.message("Winstar OLED\nPi Powered")
     time.sleep(2)
-    lcd.home()
-    lcd.clear()
-    lcd.message("Test")
-    time.sleep(2)
-    lcd.message("Test 2")
-    time.sleep(2)
 
     lcd.home()
     lcd.clear()
-    lcd.setCursor(0,1)
-    lcd.message("Line 1")
-    lcd.setCursor(0,0)
-    lcd.message("Line 2")
-    time.sleep(2)
 
+    for i in range(0,6):
+        for j in range(0,16):
+            lcd.write4bits(160+(i*16)+j, True)
+        time.sleep(2)
+        lcd.home()
+        lcd.clear()
 
   except KeyboardInterrupt:
     pass
