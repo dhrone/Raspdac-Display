@@ -42,14 +42,14 @@ exit 0
      Paris.  TIMEZONE = "Europe/Paris"
      ```
     
-  * The program relies upon two python packages that are not installed by default on the Volumio 1.55 distribution.  These are moment and python-mpd.  They are most easily installed using the Python Package Manager (PIP). If you do not have pip installed you can add it using the following command.
+  * The program relies upon two python packages that are not installed by default on the Volumio 1.55 distribution.  These are moment and python-mpd2.  They are most easily installed using the Python Package Manager (PIP). If you do not have pip installed you can add it using the following command.
    ```
    apt-get install python-setuptools && easy_install pip
    ```
   * With PIP installed you can install moment and python-mpd with the following commands.
    ```
    pip install moment
-   pip install python-mpd
+   pip install python-mpd2
    ```
   
    
