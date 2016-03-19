@@ -28,6 +28,8 @@ LOGFILE='/var/log/RaspDacDisplay.log'
 
 # Adjust this setting to localize the time display to your region
 TIMEZONE="US/Eastern"
+#TIMEZONE="Europe/Paris"
+
 
 
 class RaspDac_Display:
@@ -43,7 +45,7 @@ class RaspDac_Display:
 		# Will try to connect multiple times
 
 		for i in range (1,ATTEMPTS):
-			self.client = MPDClient()
+			self.client = MPDClient(use_unicode=True)
 
 			try:
 				# Connect to the MPD daemon
@@ -85,7 +87,7 @@ class RaspDac_Display:
 			m_currentsong = self.client.currentsong()
 		except:
 			logging.warning("Could not get status from MPD daemon")
-			return { 'state':"stop", 'artist':"", 'title':"", 'current':0, 'duration':0 }
+			return { 'state':u"stop", 'artist':u"", 'title':u"", 'current':0, 'duration':0 }
 
 		state = m_status.get('state')
 		if state == "play":
@@ -102,13 +104,13 @@ class RaspDac_Display:
 
 		  # since we are returning the info as a JSON formatted return, convert
 		  # any None's into reasonable values
-		  if artist is None: artist = ""
-		  if title is None: title = ""
+		  if artist is None: artist = u""
+		  if title is None: title = u""
 		  if current is None: current = 0
 		  if duration is None: duration = 0
 		  return { 'state':state, 'artist':artist, 'title':title, 'current':current, 'duration': duration }
 	  	else:
-		  return { 'state':"stop", 'artist':"", 'title':"", 'current':0, 'duration':0 }
+		  return { 'state':u"stop", 'artist':u"", 'title':u"", 'current':0, 'duration':0 }
 
 	def status_spop(self):
 		# Try to get status from SPOP daemon
@@ -118,7 +120,7 @@ class RaspDac_Display:
 			spot_status_string = self.spotclient.read_until("\n").strip()
 		except:
 			logging.warning("Could not get status from SPOP daemon")
-			return { 'state':"stop", 'artist':"", 'title':"", 'current':0, 'duration':0 }
+			return { 'state':u"stop", 'artist':u"", 'title':u"", 'current':0, 'duration':0 }
 
 		spot_status = json.loads(spot_status_string)
 
@@ -131,8 +133,8 @@ class RaspDac_Display:
 		  	# since we are returning the info as a JSON formatted return, convert
 		  	# any None's into reasonable values
 
-			if artist is None: artist = ""
-			if title is None: title = ""
+			if artist is None: artist = u""
+			if title is None: title = u""
 			if current is None: current = 0
 			if duration is None:
 				duration = 0
@@ -141,9 +143,9 @@ class RaspDac_Display:
 				# Need to adjust to seconds to be consistent with MPD
 				duration = duration / 1000
 
-			return { 'state':"play", 'artist':artist, 'title':title, 'current':current, 'duration': duration }
+			return { 'state':u"play", 'artist':artist, 'title':title, 'current':current, 'duration': duration }
 	  	else:
-			return { 'state':"stop", 'artist':"", 'title':"", 'current':0, 'duration':0 }
+			return { 'state':u"stop", 'artist':u"", 'title':u"", 'current':0, 'duration':0 }
 
 
 	def status(self):
