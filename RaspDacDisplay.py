@@ -3,6 +3,7 @@ import moment
 import time
 import json
 import logging
+import commands
 from mpd import MPDClient
 import telnetlib
 import RPi.GPIO as GPIO
@@ -14,6 +15,8 @@ import sys
 ARTIST_TIME = 8.0 # Amount of time to display Artist name (in seconds)
 TITLE_TIME = 10.0 # Amount of time to display the Title  (in seconds)
 HESITATION_TIME = 2.5 # Amount of time to hesistate before scrolling (in seconds)
+NOTPLAYING_TIMEDISPLAY = 8.0 # Amount of time to display Time
+NOTPLAYING_IPDISPLAY   = 1.5 # Amount of time to display IP address
 
 # The Winstar display shipped with the RaspDac is capable of two lines of display
 # when the 5x8 font is used.  This code assumes that is what you will be using.
@@ -209,8 +212,8 @@ def Display(q, l, c):
 	  short_lines=True
 
 	  # Smooth animation
-	  if time.time() - prev_time < .05:
-		  time.sleep(.05-(time.time()-prev_time))
+	  if time.time() - prev_time < .08:
+		  time.sleep(.08-(time.time()-prev_time))
 	  try:
 		  # Determine if any lines have been udpated and if yes display them
 		  for i in range(len(item)):
@@ -271,6 +274,11 @@ if __name__ == '__main__':
 	logging.info("RaspDac Display Startup")
 
 	try:
+		q = Queue.Queue()
+		dm = Thread(target=Display, args=(q,DISPLAY_HEIGHT,DISPLAY_WIDTH))
+		dm.setDaemon(True)
+		dm.start()
+
 		rd = RaspDac_Display()
 	except:
 		#e = sys.exc_info()[0]
@@ -280,10 +288,6 @@ if __name__ == '__main__':
 
 	try:
 
-		q = Queue.Queue()
-		dm = Thread(target=Display, args=(q,DISPLAY_HEIGHT,DISPLAY_WIDTH))
-		dm.setDaemon(True)
-		dm.start()
 
 		display_mode = "ARTIST"
 		beenplaying = True
@@ -295,10 +299,14 @@ if __name__ == '__main__':
 		hesitate = False
 		hesitation_etime = 0
 		display_etime = 0
+		notplaying_state = "TIME"
+		ctime = ""
+		hesitation_etime = time.time() + HESITATION_TIME
 
 
 		while True:
 			current_time = moment.utcnow().timezone(TIMEZONE).format("h:m A").strip()
+			current_ip = commands.getoutput("hostname -I").strip()
 
 			cstatus = rd.status()
 			state = cstatus.get('state')
@@ -308,15 +316,37 @@ if __name__ == '__main__':
 					beenplaying = False
 					currentArtist = ""
 					currentTitle = ""
-					logging.info("Ready " + current_time)
-					q.put(["Ready",current_time])
+					notplaying_state = "TIME"
+					hesitation_etime = time.time() + NOTPLAYING_TIMEDISPLAY
+					cip = "" # This will guarantee that the IP gets displayed
+					ctime = "" # This will guarantee time gets displayed
 
 
-				# Only update display time if the time has changed
-				if current_time != ctime:
-					logging.info("Ready " + current_time)
-					q.put(["Ready", current_time])
-					ctime = current_time
+				if notplaying_state == "TIME":
+					# check to see if the time to switch the not playing display has been reached
+					if (hesitation_etime < time.time()):
+						notplaying_state = "IP"
+						hesitation_etime = time.time() + NOTPLAYING_IPDISPLAY
+						cip = ""
+					else:
+						# Only update display time if the time has changed
+						if current_time != ctime:
+							logging.info("Ready " + current_time)
+
+							q.put(["Ready".center(16), current_time.center(16)])
+							ctime = current_time
+
+				if notplaying_state == "IP":
+					# check to see if the time to switch the not playing display has been reached
+					if (hesitation_etime < time.time()):
+						notplaying_state = "TIME"
+						hesitation_etime = time.time() + NOTPLAYING_TIMEDISPLAY
+						ctime = ""
+					else:
+						if current_ip != cip:
+							logging.info("IP " + current_ip)
+							q.put([current_ip.center(16), current_time.center(16)])
+							cip = current_ip
 
 				time.sleep(1)
 
