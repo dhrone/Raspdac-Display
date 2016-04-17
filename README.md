@@ -141,23 +141,23 @@ Follow the instructions found at http://www.runeaudio.com/documentation/troubles
      pacman -Sy wiringpi
      ```
    * C. Fix the distutils installation.  The current image has a bug in the distutils function which prevents the Python package manager from working properly.  Running the PyPa bootstrap routine for ez_setup seems to correct the issue.
-     ```
-     wget https://bootstrap.pypa.io/ez_setup.py -O - | python2
-     ```
+  ```
+  wget https://bootstrap.pypa.io/ez_setup.py -O - | python2
+  ```
    * D. Retrive the python package manager for python2.
-     ```
-     pacman -Ss python2-pip
-     ```
+  ```
+  pacman -Ss python2-pip
+  ```
    * E. Add the moment and python-mpd2 packages.
-     ```
-     pip2 install moment
-     pip2 install python-mpd2
-     ```
- * Step six.  Retrieve the current version of the RaspDac_Display software from github
-   ```
-   github clone https://github.com/dhrone/RaspDac_Display
-   ```
- * Step seven.  Place files in their appropriate directories and register the service with systemctl to enable autostart.  All of these commands should be issued from within the Raspdac_Display directory that you retrieved from github.
+  ```
+  pip2 install moment
+  pip2 install python-mpd2
+  ```
+* Step six.  Retrieve the current version of the RaspDac_Display software from github
+```
+github clone https://github.com/dhrone/RaspDac_Display
+```
+* Step seven.  Place files in their appropriate directories and register the service with systemctl to enable autostart.  All of these commands should be issued from within the Raspdac_Display directory that you retrieved from github.
    * A.  Files for the display
      ```
      cp oled.service /usr/lib/systemd/system/
