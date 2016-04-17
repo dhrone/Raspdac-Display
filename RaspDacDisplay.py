@@ -33,6 +33,14 @@ LOGFILE='/var/log/RaspDacDisplay.log'
 TIMEZONE="US/Eastern"
 #TIMEZONE="Europe/Paris"
 
+# Logging level
+#LOGLEVEL=logging.DEBUG
+LOGLEVEL=logging.INFO
+#LOGLEVEL=logging.WARNING
+#LOGLEVEL=logging.CRITICAL
+
+
+
 
 
 class RaspDac_Display:
@@ -44,7 +52,7 @@ class RaspDac_Display:
 		# Initilize the connections to the music Daemons.  Currently supporting
 		# MPD and SPOP (for Spotify)
 
-		ATTEMPTS=6
+		ATTEMPTS=3
 		# Will try to connect multiple times
 
 		for i in range (1,ATTEMPTS):
@@ -55,14 +63,11 @@ class RaspDac_Display:
 				self.client.connect("localhost", 6600)
 				break
 			except:
-				logging.warning("Connection to MPD service attempt " + str(i) + " failed")
+#				logging.warning("Connection to MPD service attempt " + str(i) + " failed")
 				time.sleep(2)
 		else:
 			# After the alloted number of attempts did not succeed in connecting
-			logging.critical("Unable to connect to MPD service")
-
-			# Passing Exception on to calling routine which will likely exit
-			raise
+			logging.debug("Unable to connect to MPD service on startup")
 
 		# Now attempting to connect to the Spotify daemon
 		# This may fail if Spotify is not configured.  That's ok!
@@ -70,16 +75,13 @@ class RaspDac_Display:
 			try:
 				self.spotclient = telnetlib.Telnet("localhost",6602)
 				self.spotclient.read_until("\n")
-				self.spotifyenabled=True
 				break
 			except:
-				logging.warning("Connection to Spotify service attempt " + str(i) + " failed")
+#				logging.warning("Connection to Spotify service attempt " + str(i) + " failed")
 				time.sleep(2)
 		else:
 			# After the alloted number of attempts did not succeed in connecting
-			logging.critical("Unable to connect to Spotify service")
-			# Exit with spotify marked as not running
-			self.spotifyenabled = False
+			logging.debug("Unable to connect to Spotify service on startup")
 
 
 	def status_mpd(self):
@@ -89,8 +91,14 @@ class RaspDac_Display:
 			m_status = self.client.status()
 			m_currentsong = self.client.currentsong()
 		except:
-			logging.warning("Could not get status from MPD daemon")
-			return { 'state':u"stop", 'artist':u"", 'title':u"", 'current':0, 'duration':0 }
+			# Attempt to reestablish connection to daemon
+			try:
+				self.client.connect("localhost", 6600)
+				m_status=self.client.status()
+				m_currentsong = self.client.currentsong()
+			except:
+				logging.debug("Could not get status from MPD daemon")
+				return { 'state':u"notrunning", 'artist':u"", 'title':u"", 'current':0, 'duration':0 }
 
 		state = m_status.get('state')
 		if state == "play":
@@ -122,8 +130,15 @@ class RaspDac_Display:
 			self.spotclient.write("status\n")
 			spot_status_string = self.spotclient.read_until("\n").strip()
 		except:
-			logging.warning("Could not get status from SPOP daemon")
-			return { 'state':u"stop", 'artist':u"", 'title':u"", 'current':0, 'duration':0 }
+			# Try to reestablish connection to daemon
+			try:
+				self.spotclient = telnetlib.Telnet("localhost",6602)
+				self.spotclient.read_until("\n")
+				self.spotclient.write("status\n")
+				spot_status_string = self.spotclient.read_until("\n").strip()
+			except:
+				logging.debug("Could not get status from SPOP daemon")
+				return { 'state':u"notrunning", 'artist':u"", 'title':u"", 'current':0, 'duration':0 }
 
 		spot_status = json.loads(spot_status_string)
 
@@ -159,14 +174,8 @@ class RaspDac_Display:
 		# If MPD is stopped
 		if status.get('state') != "play":
 
-			# and SPOP is running
-			if self.spotifyenabled is True:
-
-				# Try the SPOP daemon
-				status = self.status_spop()
-
-		#status['artist'] = status['artist'].encode("utf-8")
-		#status['title'] = status['title'].encode("utf-8")
+			# Try SPOP
+			status = self.status_spop()
 
 		return status
 
@@ -270,12 +279,12 @@ def Display(q, l, c):
 
 
 if __name__ == '__main__':
-	logging.basicConfig(format='%(asctime)s:%(levelname)s:%(message)s', filename=LOGFILE, level=logging.INFO)
+	logging.basicConfig(format='%(asctime)s:%(levelname)s:%(message)s', filename=LOGFILE, level=LOGLEVEL)
 	logging.info("RaspDac Display Startup")
 
 	try:
-		q = Queue.Queue()
-		dm = Thread(target=Display, args=(q,DISPLAY_HEIGHT,DISPLAY_WIDTH))
+		dq = Queue.Queue()  # Create display Queue
+		dm = Thread(target=Display, args=(dq,DISPLAY_HEIGHT,DISPLAY_WIDTH))
 		dm.setDaemon(True)
 		dm.start()
 
@@ -306,7 +315,7 @@ if __name__ == '__main__':
 
 		while True:
 			current_time = moment.utcnow().timezone(TIMEZONE).format("h:m A").strip()
-			current_ip = commands.getoutput("hostname -I").strip()
+			current_ip = commands.getoutput("ip -4 route get 1 | head -1 | cut -d' ' -f8 | tr -d '\n'").strip()
 
 			cstatus = rd.status()
 			state = cstatus.get('state')
@@ -333,7 +342,7 @@ if __name__ == '__main__':
 						if current_time != ctime:
 							logging.info("Ready " + current_time)
 
-							q.put(["Ready".center(16), current_time.center(16)])
+							dq.put(["Ready".center(DISPLAY_WIDTH), current_time.center(DISPLAY_WIDTH)])
 							ctime = current_time
 
 				if notplaying_state == "IP":
@@ -345,7 +354,7 @@ if __name__ == '__main__':
 					else:
 						if current_ip != cip:
 							logging.info("IP " + current_ip)
-							q.put([current_ip.center(16), current_time.center(16)])
+							dq.put([current_ip.center(DISPLAY_WIDTH), current_time.center(DISPLAY_WIDTH)])
 							cip = current_ip
 
 				time.sleep(1)
@@ -421,7 +430,7 @@ if __name__ == '__main__':
 				# Only update if one of the display items has changed
 				if update_needed:
 					# add new display items to display queue
-					q.put([display, timepos])
+					dq.put([display, timepos])
 					update_needed = False
 
 				time.sleep(.25)
@@ -431,13 +440,19 @@ if __name__ == '__main__':
 		pass
 
 	finally:
-		q.put(["Goodbye!",""])
+		dq.put(["Goodbye!",""])
 		logging.info("Goodbye!")
-		rd.client.disconnect()
-		if rd.spotifyenabled:
+		try:
+			rd.client.disconnect()
+		except:
+			pass
+		try:
 			rd.spotclient.write("bye\n")
 			rd.spotclient.close()
+		except:
+			pass
+
 		time.sleep(2)
-		q.put(["",""])
+		dq.put(["",""])
 		time.sleep(1)
 		GPIO.cleanup()

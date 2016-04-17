@@ -1,0 +1,16 @@
+[Unit]
+Description=Audiophonics Shutdown Service
+After=network.target
+
+[Service]
+ExecStart=/usr/local/bin/sds.sh
+ExecReload=/usr/bin/kill -HUP $MAINPID
+KillMode=process
+Restart=always
+RestartSec=10
+StartLimitInterval=30
+StartLimitBurst=20
+
+[Install]
+WantedBy=multi-user.target
+

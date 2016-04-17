@@ -48,6 +48,26 @@
 import RPi.GPIO as GPIO
 import time
 
+
+# Make sure to set your pin mappings to the correct wiring for your display!!
+
+# Pin Mappings V2
+#OLED_DB4=25
+#OLED_DB5=24
+#OLED_DB6=23
+#OLED_DB7=15
+#OLED_RS=7
+#OLED_E=8
+
+# Pin Mappings V3
+OLED_DB4=25
+OLED_DB5=24
+OLED_DB6=23
+OLED_DB7=27
+OLED_RS=7
+OLED_E=8
+
+
 class Winstar_GraphicOLED:
 
     # commands
@@ -123,32 +143,24 @@ class Winstar_GraphicOLED:
         self.numlines=2
 
 
-    def oledReset(self, pin_rs=7, pin_e=8, pins_db=[25, 24, 23, 15]):
+    def oledReset(self):
         GPIO.setmode(GPIO.BCM)
         GPIO.setwarnings(False)
-        #GPIO.cleanup()
-        pins_db1 = [25, 24, 23, 15, 8, 7]
-        for pin in pins_db1:
+
+        self.pins_db=[OLED_DB4, OLED_DB5, OLED_DB6, OLED_DB7]
+        self.pin_rs = OLED_RS
+        self.pin_e = OLED_E
+
+        # Initialize GPIO pins
+        for pin in self.pins_db:
            GPIO.setup(pin, GPIO.OUT, initial=GPIO.LOW)
 
-        self.pin_rs = pin_rs
-        self.pin_e = pin_e
-        self.pins_db = pins_db
-
-        GPIO.setup(self.pin_e, GPIO.OUT)
-        GPIO.setup(self.pin_rs, GPIO.OUT)
-
-        GPIO.output(self.pin_rs, False)
-        GPIO.output(self.pin_e, False)
-
-        for pin in self.pins_db:
-            GPIO.setup(pin, GPIO.OUT)
+        GPIO.setup(OLED_E, GPIO.OUT, initial=GPIO.LOW)
+        GPIO.setup(OLED_RS, GPIO.OUT, initial=GPIO.LOW)
 
         # initialization sequence taken from audiophonics.fr site
         # there is a good writeup on the HD44780 at Wikipedia
         # https://en.wikipedia.org/wiki/Hitachi_HD44780_LCD_controller
-
-        #self.delayMicroseconds(10000)
 
         # Assuming that the display may already be in 4 bit mode
         # send five 0000 instructions to resync the display
@@ -378,6 +390,7 @@ if __name__ == '__main__':
 
   try:
 
+    print "Winstar OLED Display Test"
     lcd = Winstar_GraphicOLED()
     lcd.oledReset()
     lcd.home()
@@ -405,6 +418,7 @@ if __name__ == '__main__':
     lcd.home()
     lcd.clear()
 
+
   except KeyboardInterrupt:
     pass
 
@@ -416,3 +430,4 @@ if __name__ == '__main__':
     lcd.home()
     lcd.clear()
     GPIO.cleanup()
+    print "Winstar OLED Display Test Complete"
