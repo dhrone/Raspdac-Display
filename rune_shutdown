@@ -33,8 +33,14 @@
 
 if [ $1 = "poweroff" ] ; then
   echo "power off RuneAudio"
+  /usr/bin/gpio -g mode 17 out
+  /usr/bin/gpio -g write 17 1
+  sleep 1
+  /usr/bin/gpio -g write 17 0
 else
   echo "reboot RuneAudio"
+  /usr/bin/gpio -g mode 4 out
+  /usr/bin/gpio -g write 4 1
 fi
 
 echo "Stop MPD and unmount shares..."
