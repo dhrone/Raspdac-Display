@@ -173,6 +173,7 @@ git clone https://github.com/dhrone/RaspDac_Display
      ```
      cp sds.service /usr/lib/systemd/system/
      cp sds.sh /usr/local/bin
+     chmod +x /usr/local/bin/sds.sh
      systemctl enable sds.service
      ```
 
