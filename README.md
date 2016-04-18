@@ -164,6 +164,7 @@ github clone https://github.com/dhrone/RaspDac_Display
      cp RaspDacDisplay.py /usr/local/bin
      cp Winstar_GraphicOLD.py /usr/local/bin
      cp rune_shutdown /var/www/command/
+     chmod +x /var/www/command/rune_shutdown  
      systemctl enable oled.service
      ```
      Note: you will be overwriting the official version of the rune_shutdown command.  If you attempt to pull the latest RuneAudio UI from github, it will fail unless you stash the change first.
@@ -205,6 +206,7 @@ This is version 0.5 and should be considered BETA code.  It (hopefully) solves m
 The basis for most of this code comes from Lardconcepts (https://gist.github.com/lardconcepts/4947360)
 A great overview of LCD/OLED logic is available on Wikipedia (https://en.wikipedia.org/wiki/Hitachi_HD44780_LCD_controller).  While that document is focused on the popular HD44870 LCDs, most of what is describe there applies to the Winstar OLED.  There are important differences though.  The OLED appears to be much more sensitive to timing issues and requires a different command sequence to reset it back to a known good state upon a warmstart.
 Understanding the initialization behavior of the Winstar in 4 bit mode was greatly assisted by PicAxe who currently have a PDF posted which detailed a method to resync with the display.  This is described on the last page of  http://www.picaxe.com/docs/oled.pdf.
+Most of the power management logic was pulled from discussions on the Runeaudio (http://www.runeaudio.com/forum/audiophonics-i-sabre-v3-dac-es9023-tcxo-t3377.html) and Audiophonics (http://forum.audiophonics.fr/viewtopic.php?f=4&t=1620) forums.  
 
 ## License
 
