@@ -155,7 +155,7 @@ Follow the instructions found at http://www.runeaudio.com/documentation/troubles
   ```
 * Step six.  Retrieve the current version of the RaspDac_Display software from github
 ```
-github clone https://github.com/dhrone/RaspDac_Display
+git clone https://github.com/dhrone/RaspDac_Display
 ```
 * Step seven.  Place files in their appropriate directories and register the service with systemctl to enable autostart.  All of these commands should be issued from within the Raspdac_Display directory that you retrieved from github.
    * A.  Files for the display
