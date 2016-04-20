@@ -70,8 +70,16 @@ There are several changes that need to be made to the Runeaudio distribution to 
 * Step one.  Download and install the image on your SD card
 Follow the instructions found at http://www.runeaudio.com/documentation/
 
+The following steps require that your Raspdac be powered up, connected to the network and that you be logged into it as the root user.  Runeaudio allows login using the ssh protocol.  The username is root and the password is rune.  
+
 * Step two.  Enable the ES9023 DAC
-Edit /boot/config.txt and uncomment the line related to the hifiberry-dac
+Edit /boot/config.txt and uncomment the line related to the hifiberry-dac.  You can use the editor of your choice here.  nano works fine, as does vi.
+  ```
+  nano /boot/config.txt
+  ```
+  
+  Move the cursor down to the line that has #dtoverlay=hifiberry-dac, remove the # to uncomment that line, save the file and exit.
+  
   ```
   # Uncomment one of these lines to enable an audio interface
   dtoverlay=hifiberry-dac
@@ -140,29 +148,27 @@ Follow the instructions found at http://www.runeaudio.com/documentation/troubles
      ```
      pacman -Sy wiringpi
      ```
-   * C. Fix the distutils installation.  The current image has a bug in the distutils function which prevents the Python package manager from working properly.  Running the PyPa bootstrap routine for ez_setup seems to correct the issue.
+   * C. Retrive the python package manager for python2.
   ```
-  wget https://bootstrap.pypa.io/ez_setup.py -O - | python2
+  pacman -Sy python2-pip
   ```
-   * D. Retrive the python package manager for python2.
-  ```
-  pacman -Ss python2-pip
-  ```
-   * E. Add the moment and python-mpd2 packages.
+   * D. Add the moment and python-mpd2 packages.
   ```
   pip2 install moment
   pip2 install python-mpd2
   ```
 * Step six.  Retrieve the current version of the RaspDac_Display software from github
 ```
-git clone https://github.com/dhrone/RaspDac_Display
+cd ~
+wget https://github/dhrone/Raspdac-Display/archive/master.tar.gz
+tar xvf master.tar.gz
 ```
 * Step seven.  Place files in their appropriate directories and register the service with systemctl to enable autostart.  All of these commands should be issued from within the Raspdac_Display directory that you retrieved from github.
    * A.  Files for the display
      ```
      cp oled.service /usr/lib/systemd/system/
-     cp RaspDacDisplay.py /usr/local/bin
-     cp Winstar_GraphicOLD.py /usr/local/bin
+     cp RaspDacDisplay.py /usr/local/bin/
+     cp Winstar_GraphicOLD.py /usr/local/bin/
      cp rune_shutdown /var/www/command/
      chmod +x /var/www/command/rune_shutdown  
      systemctl enable oled.service
@@ -172,7 +178,7 @@ git clone https://github.com/dhrone/RaspDac_Display
    * B.  Files for the power management function (RaspDac version V3 only)
      ```
      cp sds.service /usr/lib/systemd/system/
-     cp sds.sh /usr/local/bin
+     cp sds.sh /usr/local/bin/
      chmod +x /usr/local/bin/sds.sh
      systemctl enable sds.service
      ```
