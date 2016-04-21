@@ -157,6 +157,12 @@ Follow the instructions found at http://www.runeaudio.com/documentation/troubles
   pip2 install moment
   pip2 install python-mpd2
   ```
+  
+    If you receive an error message when running the pip2 commands, you may need to repair the distutils installation.  This can be done by explicitly installing ez_setup.py.
+  ```
+  wget https://bootstrap.pypa.io/ez_setup.py -O - | python2
+  ```
+  
 * Step six.  Retrieve the current version of the RaspDac_Display software from github
 ```
 mkdir /home/raspdac
