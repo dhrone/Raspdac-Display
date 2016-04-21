@@ -159,9 +159,11 @@ Follow the instructions found at http://www.runeaudio.com/documentation/troubles
   ```
 * Step six.  Retrieve the current version of the RaspDac_Display software from github
 ```
-cd ~
-wget https://github/dhrone/Raspdac-Display/archive/master.tar.gz
+mkdir /home/raspdac
+cd /home/raspdac
+wget https://github.com/dhrone/Raspdac-Display/archive/master.tar.gz
 tar xvf master.tar.gz
+cd /home/raspdac/Raspdac-Display-master/
 ```
 * Step seven.  Place files in their appropriate directories and register the service with systemctl to enable autostart.  All of these commands should be issued from within the Raspdac_Display directory that you retrieved from github.
    * A.  Files for the display
@@ -169,8 +171,6 @@ tar xvf master.tar.gz
      cp oled.service /usr/lib/systemd/system/
      cp RaspDacDisplay.py /usr/local/bin/
      cp Winstar_GraphicOLD.py /usr/local/bin/
-     cp rune_shutdown /var/www/command/
-     chmod +x /var/www/command/rune_shutdown  
      systemctl enable oled.service
      ```
      Note: you will be overwriting the official version of the rune_shutdown command.  If you attempt to pull the latest RuneAudio UI from github, it will fail unless you stash the change first.
@@ -179,7 +179,9 @@ tar xvf master.tar.gz
      ```
      cp sds.service /usr/lib/systemd/system/
      cp sds.sh /usr/local/bin/
+     cp rune_shutdown /var/www/command/
      chmod +x /usr/local/bin/sds.sh
+     chmod +x /var/www/command/rune_shutdown  
      systemctl enable sds.service
      ```
 
