@@ -112,7 +112,7 @@ class Winstar_GraphicOLED:
     LCD_5x10s = 0x04
     LCD_5x8DOTS = 0x00
 
-    character_translation = [   0,0,0,0,0,0,0,0,0,0,                        #0
+    character_translation = [   0,0,0,0,0,0,0,0,0,32,                        #0
                                 0,0,0,0,0,0,0,0,0,0,                        #10
                                 0,0,0,0,0,0,0,0,0,0,                        #20
                                 0,0,32,33,34,35,36,37,38,39,                #30
