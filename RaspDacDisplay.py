@@ -12,6 +12,7 @@ from threading import Thread
 import signal
 import sys
 
+STARTUP_MSG = "Raspdac\nStarting"
 
 ARTIST_TIME = 8.0 # Amount of time to display Artist name (in seconds)
 TITLE_TIME = 10.0 # Amount of time to display the Title  (in seconds)
@@ -32,6 +33,7 @@ LOGFILE='/var/log/RaspDacDisplay.log'
 
 # Adjust this setting to localize the time display to your region
 TIMEZONE="US/Eastern"
+TIME24HOUR=False
 #TIMEZONE="Europe/Paris"
 
 # Logging level
@@ -195,7 +197,7 @@ def Display(q, l, c):
   lcd.home()
   lcd.clear()
 
-  lcd.message("RaspDac\nStarting")
+  lcd.message(STARTUP_MSG)
   time.sleep(2)
 
   for i in range (0, l):
@@ -318,7 +320,11 @@ if __name__ == '__main__':
 
 
 		while True:
-			current_time = moment.utcnow().timezone(TIMEZONE).format("h:m A").strip()
+			if TIME24HOUR == True:
+				current_time = moment.utcnow().timezone(TIMEZONE).format("HH:MM").strip()
+			else:
+				current_time = moment.utcnow().timezone(TIMEZONE).format("h:m a").strip()
+				
 			current_ip = commands.getoutput("ip -4 route get 1 | head -1 | cut -d' ' -f8 | tr -d '\n'").strip()
 
 			cstatus = rd.status()
