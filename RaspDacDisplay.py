@@ -9,6 +9,7 @@ import telnetlib
 import RPi.GPIO as GPIO
 import Queue
 from threading import Thread
+import signal
 import sys
 
 
@@ -277,9 +278,12 @@ def Display(q, l, c):
 		  prev_time = time.time()
 		  pass
 
-
+def sigterm_handler(_signo, _stack_frame):
+        sys.exit(0)
+        
 if __name__ == '__main__':
-	logging.basicConfig(format='%(asctime)s:%(levelname)s:%(message)s', filename=LOGFILE, level=LOGLEVEL)
+        signal.signal(signal.SIGTERM, sigterm_handler)
+        logging.basicConfig(format='%(asctime)s:%(levelname)s:%(message)s', filename=LOGFILE, level=LOGLEVEL)
 	logging.info("RaspDac Display Startup")
 
 	try:
