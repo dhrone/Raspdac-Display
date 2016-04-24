@@ -43,6 +43,9 @@ else
   /usr/bin/gpio -g write 4 1
 fi
 
+# Stop OLED display
+systemctl stop oled
+
 echo "Stop MPD and unmount shares..."
 mpc stop
 systemctl stop nginx
