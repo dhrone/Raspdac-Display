@@ -258,7 +258,7 @@ def Display(q, l, c):
 			  # Update all long lines
 			  for i in range(len(lines)):
 				  if len(lines[i])>c:
-					  buf = "%s		%s" % (lines[i], lines[i][0:DISPLAY_WIDTH-1])
+					  buf = "%s          %s" % (lines[i], lines[i][0:DISPLAY_WIDTH-1])
 				  	  #buf = "{}		{}".format(lines[i],lines[i][0:DISPLAY_WIDTH-1])
 					  #buf = lines[i]+"		  "+lines[i][0:c]
 
@@ -321,7 +321,7 @@ if __name__ == '__main__':
 
 		while True:
 			if TIME24HOUR == True:
-				current_time = moment.utcnow().timezone(TIMEZONE).format("HH:MM").strip()
+				current_time = moment.utcnow().timezone(TIMEZONE).format("HH:mm").strip()
 			else:
 				current_time = moment.utcnow().timezone(TIMEZONE).format("h:m a").strip()
 				
