@@ -176,7 +176,7 @@ cd /home/raspdac/Raspdac-Display-master/
      ```
      cp oled.service /usr/lib/systemd/system/
      cp RaspDacDisplay.py /usr/local/bin/
-     cp Winstar_GraphicOLD.py /usr/local/bin/
+     cp Winstar_GraphicOLED.py /usr/local/bin/
      systemctl enable oled.service
      ```
      Note: you will be overwriting the official version of the rune_shutdown command.  If you attempt to pull the latest RuneAudio UI from github, it will fail unless you stash the change first.
