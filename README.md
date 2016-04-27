@@ -102,7 +102,7 @@ Follow the instructions found at http://www.runeaudio.com/documentation/troubles
    ```
 
 * Step five.  Add the necessary packages to support the RaspDac_Display program
-   * A.  Update the pacman package database.  This is needed to make sure that the correct version of files will be selected on any package update.
+   * A.  Update the pacman package database but do NOT update the system from that database.  Updating the database is needed to make sure that the correct version of files will be selected when you install some of the additional packages needed to make the display work but updating all of the currently installed packages is unnecessary, takes a long time, and can destablize the system.
      ```
      pacman -Syu
      ```
@@ -142,7 +142,7 @@ Follow the instructions found at http://www.runeaudio.com/documentation/troubles
      
      :: Proceed with installation? [Y/n] 
      ```
-     I recommend that you NOT proceed with the installation as in my system, it seemed to destablize the system.  YMMV.
+     Reminder: Do NOT proceed with the installation as it appears to destablize the system!!!
 
    * B.  Add WiringPi package.  This is needed to support the power management feature of the V3 DAC.  You can skip this for the RaspDac V2.
      ```
