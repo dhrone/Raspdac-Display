@@ -191,14 +191,14 @@ class RaspDac_Display:
 		# Try to get status from LMS daemon
 
 		try:
-			lms_status = self.lmsplayer.get_mode() 
+			lms_status = self.lmsplayer.get_mode()
 		except:
 			# Try to reestablish connection to daemon
 			try:
 				self.lmsserver = pylms.server.Server()
 				self.lmsserver.connect()
 				self.lmsplayer = self.lmsserver.get_players()[0]
-				lms_status = self.lmsplayer.get_mode() 
+				lms_status = self.lmsplayer.get_mode()
 			except:
 				logging.debug("Could not get status from LMS daemon")
 				return { 'state':u"notrunning", 'artist':u"", 'title':u"", 'current':0, 'duration':0 }
@@ -206,11 +206,23 @@ class RaspDac_Display:
 
 	  	if lms_status == "play":
 			import urllib
-		
+
 			artist = urllib.unquote(str(self.lmsplayer.request("artist ?", True))).decode('utf-8')
 			title = urllib.unquote(str(self.lmsplayer.request("title ?", True))).decode('utf-8')
 			current = self.lmsplayer.get_time_elapsed()
 			duration = self.lmsplayer.get_track_duration()
+			url = self.lmsplayer.get_track_path()
+
+			# Get bitrate and tracktype if they are available.  Try blocks used to prevent array out of bounds exception if values are not found
+			try:
+				bitrate = urllib.unquote(str(self.lmsplayer.request("songinfo 2 1 url:"+url+" tags:r", True))).decode('utf-8').split("bitrate:", 1)[1]
+			except:
+				bitrate = u""
+
+			try:
+				tracktype = urllib.unquote(str(self.lmsplayer.request("songinfo 2 1 url:"+url+" tags:o", True))).decode('utf-8').split("type:",1)[1]
+			except:
+				tracktype = u""
 
 		  	# since we are returning the info as a JSON formatted return, convert
 		  	# any None's into reasonable values
@@ -218,12 +230,14 @@ class RaspDac_Display:
 			if artist is None: artist = u""
 			if title is None: title = u""
 			if current is None: current = 0
+			if bitrate is None: bitrate = u""
+			if tracktype is None: tracktype = u""
 			if duration is None:
 				duration = 0
 
-			return { 'state':u"play", 'artist':artist, 'title':title, 'current':current, 'duration': duration }
+			return { 'state':u"play", 'artist':artist, 'title':title, 'current':current, 'duration':duration, 'bitrate':bitrate, 'type':tracktype }
 	  	else:
-			return { 'state':u"stop", 'artist':u"", 'title':u"", 'current':0, 'duration':0 }
+			return { 'state':u"stop", 'artist':u"", 'title':u"", 'current':0, 'duration':0, 'bitrate':u"", 'type':u""}
 
 
 	def status(self):
@@ -341,7 +355,7 @@ def Display(q, l, c):
 
 def sigterm_handler(_signo, _stack_frame):
         sys.exit(0)
-        
+
 if __name__ == '__main__':
         signal.signal(signal.SIGTERM, sigterm_handler)
         logging.basicConfig(format='%(asctime)s:%(levelname)s:%(message)s', filename=LOGFILE, level=LOGLEVEL)
@@ -383,7 +397,7 @@ if __name__ == '__main__':
 				current_time = moment.utcnow().timezone(TIMEZONE).format("HH:mm").strip()
 			else:
 				current_time = moment.utcnow().timezone(TIMEZONE).format("h:m a").strip()
-				
+
 			current_ip = commands.getoutput("ip -4 route get 1 | head -1 | cut -d' ' -f8 | tr -d '\n'").strip()
 
 			cstatus = rd.status()

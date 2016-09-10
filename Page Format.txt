@@ -1,0 +1,80 @@
+Page Design Notes
+
+PageList consists of...
+  A name
+  An array of Pages (in to be displayed order)
+
+A Page consists of...
+  A name
+  A display duration
+  An array of lines
+
+A line consists of ...
+  A name
+  An array of variables in to-be-displayed order
+  A format string
+  A justification directive ("left", "right", "center")
+  A scroll directive (True, False)
+
+
+Example
+
+{ 'name':"Play",
+  'pages':
+    [
+      {
+        'name':"Artist",
+        'duration':8,
+        'lines': [
+          {
+            'name':"top",
+            'variables': [ "artist" ],
+            'format':"%s",
+            'justification':"left",
+            'scroll':True
+          },
+          {
+            'name':"bottom",
+            'variables': [ "position", "duration" ],
+            'format':"%s/%s",
+            'justification':"left",
+            'scroll':False
+          }
+        ]
+      },
+      {
+        'name':"Blank",
+        'duration':1,
+        'lines': [
+          {
+            'name':"top",
+            'format':"",
+          },
+          {
+            'name':"bottom",
+            'format':"",
+          }
+        ]
+      },
+      {
+        'name':"Title",
+        'duration':10,
+        'lines': [
+          {
+            'name':"top",
+            'variables': [ "title" ],
+            'format':"%s",
+            'justification':"left",
+            'scroll':True
+          },
+          {
+            'name':"bottom",
+            'variables': [ "position", "duration" ],
+            'format':"%s/%s",
+            'justification':"left",
+            'scroll':False
+          }
+        ]
+      }
+    ]
+}
