@@ -29,14 +29,14 @@ Example
           {
             'name':"top",
             'variables': [ "artist" ],
-            'format’:”{0}”,
+            'format’:"{0}",
             'justification':"left",
             'scroll':True
           },
           {
             'name':"bottom",
             'variables': [ "position", "duration" ],
-            'format’:”{0}/{1}”,
+            'format’:"{0}/{1}",
             'justification':"left",
             'scroll':False
           }
@@ -63,14 +63,14 @@ Example
           {
             'name':"top",
             'variables': [ "title" ],
-            'format’:”{0}”,
+            'format’:"{0}",
             'justification':"left",
             'scroll':True
           },
           {
             'name':"bottom",
             'variables': [ "position", "duration" ],
-            'format’:”{0}/{1}”,
+            'format’:"{0}/{1}",
             'justification':"left",
             'scroll':False
           }
