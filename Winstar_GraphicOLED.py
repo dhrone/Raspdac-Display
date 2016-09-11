@@ -44,8 +44,14 @@
 #
 # PS - Adafruit WebIDE FTMFW! http://learn.adafruit.com/webide/
 
+# Quick hack to differentiate between a raspberry Pi or not
+try:
+    import RPi.GPIO as GPIO
+    DISPLAY_INSTALLED = True
+except:
+    DISPLAY_INSTALLED = False
+    import curses
 
-import RPi.GPIO as GPIO
 import time
 
 
@@ -141,200 +147,237 @@ class Winstar_GraphicOLED:
 
     def __init__(self):
         self.numlines=2
+        if DISPLAY_INSTALLED == False:
+            self.stdscr = curses.initscr()
+            self.curx = 0
+            self.cury = 0
 
 
     def oledReset(self):
-        GPIO.setmode(GPIO.BCM)
-        GPIO.setwarnings(False)
+        if DISPLAY_INSTALLED:
+            GPIO.setmode(GPIO.BCM)
+            GPIO.setwarnings(False)
 
-        self.pins_db=[OLED_DB4, OLED_DB5, OLED_DB6, OLED_DB7]
-        self.pin_rs = OLED_RS
-        self.pin_e = OLED_E
+            self.pins_db=[OLED_DB4, OLED_DB5, OLED_DB6, OLED_DB7]
+            self.pin_rs = OLED_RS
+            self.pin_e = OLED_E
 
-        # Initialize GPIO pins
-        for pin in self.pins_db:
-           GPIO.setup(pin, GPIO.OUT, initial=GPIO.LOW)
+            # Initialize GPIO pins
+            for pin in self.pins_db:
+               GPIO.setup(pin, GPIO.OUT, initial=GPIO.LOW)
 
-        GPIO.setup(OLED_E, GPIO.OUT, initial=GPIO.LOW)
-        GPIO.setup(OLED_RS, GPIO.OUT, initial=GPIO.LOW)
+            GPIO.setup(OLED_E, GPIO.OUT, initial=GPIO.LOW)
+            GPIO.setup(OLED_RS, GPIO.OUT, initial=GPIO.LOW)
 
-        # initialization sequence taken from audiophonics.fr site
-        # there is a good writeup on the HD44780 at Wikipedia
-        # https://en.wikipedia.org/wiki/Hitachi_HD44780_LCD_controller
+            # initialization sequence taken from audiophonics.fr site
+            # there is a good writeup on the HD44780 at Wikipedia
+            # https://en.wikipedia.org/wiki/Hitachi_HD44780_LCD_controller
 
-        # Assuming that the display may already be in 4 bit mode
-        # send five 0000 instructions to resync the display
-        # NOTE:  There is a resync function that is included later but is
-        #        not being used here due to the need to place the display in
-        #        8 bit mode temporarily
-        for i in range(1,5):
-            self.writeonly4bits(0x00, False)
+            # Assuming that the display may already be in 4 bit mode
+            # send five 0000 instructions to resync the display
+            # NOTE:  There is a resync function that is included later but is
+            #        not being used here due to the need to place the display in
+            #        8 bit mode temporarily
+            for i in range(1,5):
+                self.writeonly4bits(0x00, False)
 
-        self.delayMicroseconds(1000)
+            self.delayMicroseconds(1000)
 
-        # Now place in 8 bit mode so that we start from a known state
-        # issuing function set twice in case we are in 4 bit mode
-        self.writeonly4bits(0x03, False)
-        self.writeonly4bits(0x03, False)
+            # Now place in 8 bit mode so that we start from a known state
+            # issuing function set twice in case we are in 4 bit mode
+            self.writeonly4bits(0x03, False)
+            self.writeonly4bits(0x03, False)
 
-        self.delayMicroseconds(1000)
+            self.delayMicroseconds(1000)
 
-        # placing display in 4 bit mode
-        self.writeonly4bits(0x02, False)
-        self.delayMicroseconds(1000)
+            # placing display in 4 bit mode
+            self.writeonly4bits(0x02, False)
+            self.delayMicroseconds(1000)
 
-        # From this point forward, we need to use write4bits function which
-        # implements the two stage write that 4 bit mode requires
+            # From this point forward, we need to use write4bits function which
+            # implements the two stage write that 4 bit mode requires
 
-        self.write4bits(0x08, False) # Turn display off
-        self.write4bits(0x29, False) # Function set for 4 bits, 2 lines, 5x8 font, Western European font table
-        self.write4bits(0x06, False) # Entry Mode set to increment and no shift
-        self.write4bits(0x17, False) # Set to char mode and turn on power
-        self.write4bits(0x01, False) # Clear display and reset cursor
-        self.write4bits(0x0c, False) # Turn on display
+            self.write4bits(0x08, False) # Turn display off
+            self.write4bits(0x29, False) # Function set for 4 bits, 2 lines, 5x8 font, Western European font table
+            self.write4bits(0x06, False) # Entry Mode set to increment and no shift
+            self.write4bits(0x17, False) # Set to char mode and turn on power
+            self.write4bits(0x01, False) # Clear display and reset cursor
+            self.write4bits(0x0c, False) # Turn on display
+        else:
+            self.stdscr.clear()
+            self.curx = 0
+            self.cury = 0
 
 
     def home(self):
-
-        self.write4bits(self.LCD_RETURNHOME) # set cursor position to zero
-        self.delayMicroseconds(2000) # this command takes a long time!
-
+        if DISPLAY_INSTALLED:
+            self.write4bits(self.LCD_RETURNHOME) # set cursor position to zero
+            self.delayMicroseconds(2000) # this command takes a long time!
+        else:
+            self.curx = 0
+            self.cury = 0
 
     def clear(self):
-        self.write4bits(self.LCD_CLEARDISPLAY) # command to clear display
-        self.delayMicroseconds(2000) # 2000 microsecond sleep, clearing the display takes a long time
-
+        if DISPLAY_INSTALLED:
+            self.write4bits(self.LCD_CLEARDISPLAY) # command to clear display
+            self.delayMicroseconds(2000) # 2000 microsecond sleep, clearing the display takes a long time
+        else:
+            self.stdscr.clear()
+            self.stdscr.refresh()
+            self.curx = 0
+            self.cury = 0
 
     def setCursor(self, col, row):
 
-        self.row_offsets = [ 0x00, 0x40, 0x14, 0x54 ]
+        if DISPLAY_INSTALLED:
+            self.row_offsets = [ 0x00, 0x40, 0x14, 0x54 ]
 
-        if (row > self.numlines):
-            row = self.numlines - 1 # we count rows starting w/0
+            if (row > self.numlines):
+                row = self.numlines - 1 # we count rows starting w/0
 
-        self.write4bits(self.LCD_SETDDRAMADDR | (col + self.row_offsets[row]))
+            self.write4bits(self.LCD_SETDDRAMADDR | (col + self.row_offsets[row]))
+        else:
+            self.curx = col
+            self.cury = row
 
 
     def noDisplay(self):
         ''' Turn the display off (quickly) '''
 
-        self.displaycontrol &= ~self.LCD_DISPLAYON
-        self.write4bits(self.LCD_DISPLAYCONTROL | self.displaycontrol)
+        if DISPLAY_INSTALLED:
+            self.displaycontrol &= ~self.LCD_DISPLAYON
+            self.write4bits(self.LCD_DISPLAYCONTROL | self.displaycontrol)
 
 
     def display(self):
         ''' Turn the display on (quickly) '''
 
-        self.displaycontrol |= self.LCD_DISPLAYON
-        self.write4bits(self.LCD_DISPLAYCONTROL | self.displaycontrol)
+        if DISPLAY_INSTALLED:
+            self.displaycontrol |= self.LCD_DISPLAYON
+            self.write4bits(self.LCD_DISPLAYCONTROL | self.displaycontrol)
 
 
     def noCursor(self):
         ''' Turns the underline cursor on/off '''
 
-        self.displaycontrol &= ~self.LCD_CURSORON
-        self.write4bits(self.LCD_DISPLAYCONTROL | self.displaycontrol)
+        if DISPLAY_INSTALLED:
+            self.displaycontrol &= ~self.LCD_CURSORON
+            self.write4bits(self.LCD_DISPLAYCONTROL | self.displaycontrol)
 
 
     def cursor(self):
         ''' Cursor On '''
 
-        self.displaycontrol |= self.LCD_CURSORON
-        self.write4bits(self.LCD_DISPLAYCONTROL | self.displaycontrol)
+        if DISPLAY_INSTALLED:
+            self.displaycontrol |= self.LCD_CURSORON
+            self.write4bits(self.LCD_DISPLAYCONTROL | self.displaycontrol)
 
 
     def noBlink(self):
         ''' Turn on and off the blinking cursor '''
 
-        self.displaycontrol &= ~self.LCD_BLINKON
-        self.write4bits(self.LCD_DISPLAYCONTROL | self.displaycontrol)
+        if DISPLAY_INSTALLED:
+            self.displaycontrol &= ~self.LCD_BLINKON
+            self.write4bits(self.LCD_DISPLAYCONTROL | self.displaycontrol)
 
 
     def DisplayLeft(self):
         ''' These commands scroll the display without changing the RAM '''
 
-        self.write4bits(self.LCD_CURSORSHIFT | self.LCD_DISPLAYMOVE | self.LCD_MOVELEFT)
+        if DISPLAY_INSTALLED:
+            self.write4bits(self.LCD_CURSORSHIFT | self.LCD_DISPLAYMOVE | self.LCD_MOVELEFT)
 
 
     def scrollDisplayRight(self):
         ''' These commands scroll the display without changing the RAM '''
 
-        self.write4bits(self.LCD_CURSORSHIFT | self.LCD_DISPLAYMOVE | self.LCD_MOVERIGHT);
+        if DISPLAY_INSTALLED:
+            self.write4bits(self.LCD_CURSORSHIFT | self.LCD_DISPLAYMOVE | self.LCD_MOVERIGHT);
 
 
     def leftToRight(self):
         ''' This is for text that flows Left to Right '''
 
-        self.displaymode |= self.LCD_ENTRYLEFT
-        self.write4bits(self.LCD_ENTRYMODESET | self.displaymode);
+        if DISPLAY_INSTALLED:
+            self.displaymode |= self.LCD_ENTRYLEFT
+            self.write4bits(self.LCD_ENTRYMODESET | self.displaymode);
 
 
     def rightToLeft(self):
         ''' This is for text that flows Right to Left '''
-        self.displaymode &= ~self.LCD_ENTRYLEFT
-        self.write4bits(self.LCD_ENTRYMODESET | self.displaymode)
+
+        if DISPLAY_INSTALLED:
+            self.displaymode &= ~self.LCD_ENTRYLEFT
+            self.write4bits(self.LCD_ENTRYMODESET | self.displaymode)
 
 
     def autoscroll(self):
         ''' This will 'right justify' text from the cursor '''
 
-        self.displaymode |= self.LCD_ENTRYSHIFTINCREMENT
-        self.write4bits(self.LCD_ENTRYMODESET | self.displaymode)
+        if DISPLAY_INSTALLED:
+            self.displaymode |= self.LCD_ENTRYSHIFTINCREMENT
+            self.write4bits(self.LCD_ENTRYMODESET | self.displaymode)
 
 
     def noAutoscroll(self):
         ''' This will 'left justify' text from the cursor '''
 
-        self.displaymode &= ~self.LCD_ENTRYSHIFTINCREMENT
-        self.write4bits(self.LCD_ENTRYMODESET | self.displaymode)
+        if DISPLAY_INSTALLED:
+            self.displaymode &= ~self.LCD_ENTRYSHIFTINCREMENT
+            self.write4bits(self.LCD_ENTRYMODESET | self.displaymode)
 
 
     def writeonly4bits(self, bits, char_mode=False):
-        if bits > 15: return
 
-        #self.delayMicroseconds(1000)
-        bits = bin(bits)[2:].zfill(4)
+        if DISPLAY_INSTALLED:
+            if bits > 15: return
 
-        GPIO.output(self.pin_rs, char_mode)
+            #self.delayMicroseconds(1000)
+            bits = bin(bits)[2:].zfill(4)
 
-        for pin in self.pins_db:
-            GPIO.output(pin, False)
+            GPIO.output(self.pin_rs, char_mode)
 
-        for i in range(4):
-            if bits[i] == "1":
-                GPIO.output(self.pins_db[::-1][i], True)
-        self.pulseEnable()
+            for pin in self.pins_db:
+                GPIO.output(pin, False)
+
+            for i in range(4):
+                if bits[i] == "1":
+                    GPIO.output(self.pins_db[::-1][i], True)
+            self.pulseEnable()
+
 
 
     def write4bits(self, bits, char_mode=False):
-        ''' Send command to LCD '''
 
-        #self.delayMicroseconds(1000) # 1000 microsecond sleep
+        if DISPLAY_INSTALLED:
 
-        bits = bin(bits)[2:].zfill(8)
+            ''' Send command to LCD '''
+            #self.delayMicroseconds(1000) # 1000 microsecond sleep
 
-        GPIO.output(self.pin_rs, char_mode)
+            bits = bin(bits)[2:].zfill(8)
 
-        for pin in self.pins_db:
-            GPIO.output(pin, False)
+            GPIO.output(self.pin_rs, char_mode)
 
-        for i in range(4):
-            if bits[i] == "1":
-                GPIO.output(self.pins_db[::-1][i], True)
+            for pin in self.pins_db:
+                GPIO.output(pin, False)
 
-        self.pulseEnable()
+            for i in range(4):
+                if bits[i] == "1":
+                    GPIO.output(self.pins_db[::-1][i], True)
 
-        for pin in self.pins_db:
-            GPIO.output(pin, False)
+            self.pulseEnable()
 
-        for i in range(4, 8):
-            if bits[i] == "1":
-                GPIO.output(self.pins_db[::-1][i - 4], True)
+            for pin in self.pins_db:
+                GPIO.output(pin, False)
 
-        self.pulseEnable()
-        # self.delayMicroseconds(1000)
-        #self.waitForReady()
-        #self.delayMicroseconds(5)
+            for i in range(4, 8):
+                if bits[i] == "1":
+                    GPIO.output(self.pins_db[::-1][i - 4], True)
+
+            self.pulseEnable()
+            # self.delayMicroseconds(1000)
+            #self.waitForReady()
+            #self.delayMicroseconds(5)
 
 
     def resyncDisplay(self):
@@ -344,9 +387,10 @@ class Winstar_GraphicOLED:
         # two function sets for 4 bit mode 0010
         # The display should now be resynced to be ready to accept a new cmd
 
-        for i in range(1,5):
-            self.writeonly4bits(0x0, False)
-        self.write4bits(0x02, False)
+        if DISPLAY_INSTALLED:
+            for i in range(1,5):
+                self.writeonly4bits(0x0, False)
+            self.write4bits(0x02, False)
 
 
 
@@ -360,30 +404,35 @@ class Winstar_GraphicOLED:
         # the pulse timing in the original version of this file is 10/10
         # with a 100 post time for setting
 
-        GPIO.output(self.pin_e, False)
-        self.delayMicroseconds(.1) # 1 microsecond pause - enable pulse must be > 450ns
-        GPIO.output(self.pin_e, True)
-        self.delayMicroseconds(.1) # 1 microsecond pause - enable pulse must be > 450ns
-        #time.sleep(0.000000001)
-        GPIO.output(self.pin_e, False)
-        #self.delayMicroseconds(10) # commands need > 37us to settle
+        if DISPLAY_INSTALLED:
+            GPIO.output(self.pin_e, False)
+            self.delayMicroseconds(.1) # 1 microsecond pause - enable pulse must be > 450ns
+            GPIO.output(self.pin_e, True)
+            self.delayMicroseconds(.1) # 1 microsecond pause - enable pulse must be > 450ns
+            #time.sleep(0.000000001)
+            GPIO.output(self.pin_e, False)
+            #self.delayMicroseconds(10) # commands need > 37us to settle
 
 
     def message(self, text):
         ''' Send string to LCD. Newline wraps to second line'''
 
-        for char in text:
-            if char == '\n':
-                self.write4bits(0xC0) # next line
+        if DISPLAY_INSTALLED:
+            for char in text:
+                if char == '\n':
+                    self.write4bits(0xC0) # next line
 
-            else:
-                #time.sleep(.000001)
+                else:
+                    #time.sleep(.000001)
 
-                # Translate incoming character into correct value for European charset
-                # and then send it to display.  Use space if character is out of range.
-                c = ord(char)
-                if c > 255: c = 32
-                self.write4bits(self.character_translation[c], True)
+                    # Translate incoming character into correct value for European charset
+                    # and then send it to display.  Use space if character is out of range.
+                    c = ord(char)
+                    if c > 255: c = 32
+                    self.write4bits(self.character_translation[c], True)
+        else:
+            self.stdscr.addstr(self.cury, self.curx, text.encode('utf-8'))
+            self.stdscr.refresh()
 
 
 if __name__ == '__main__':
@@ -429,5 +478,8 @@ if __name__ == '__main__':
     time.sleep(2)
     lcd.home()
     lcd.clear()
-    GPIO.cleanup()
+    if DISPLAY_INSTALLED:
+        GPIO.cleanup()
+    else:
+        curses.endwin()
     print "Winstar OLED Display Test Complete"

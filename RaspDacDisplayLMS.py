@@ -9,7 +9,14 @@ import pylms
 from pylms import server
 from pylms import player
 import telnetlib
-import RPi.GPIO as GPIO
+
+try:
+	import RPi.GPIO as GPIO
+	DISPLAY_INSTALLED = True
+except:
+	import curses
+	DISPLAY_INSTALLED = False
+
 import Queue
 from threading import Thread
 import signal
@@ -32,7 +39,8 @@ DISPLAY_WIDTH = 16 # the character width of the display
 DISPLAY_HEIGHT = 2 # the number of lines on the display
 
 # This is where the log file will be written
-LOGFILE='/var/log/RaspDacDisplay.log'
+#LOGFILE='/var/log/RaspDacDisplay.log'
+LOGFILE='./log/RaspDacDisplay.log'
 
 # Adjust this setting to localize the time display to your region
 TIMEZONE="US/Eastern"
@@ -45,8 +53,120 @@ LOGLEVEL=logging.INFO
 #LOGLEVEL=logging.WARNING
 #LOGLEVEL=logging.CRITICAL
 
+LMS_SERVER = "192.168.254.251"
 
 
+# Page Definitions
+PAGE_Play = {
+  'name':"Play",
+  'pages':
+    [
+      {
+        'name':"Artist",
+        'duration':6,
+        'lines': [
+          {
+            'name':"top",
+            'variables': [ "artist" ],
+            'format':"{0}",
+            'justification':"left",
+            'scroll':True
+          },
+          {
+            'name':"bottom",
+            'variables': [ "position" ],
+            'format':"{0}",
+            'justification':"left",
+            'scroll':False
+          }
+        ]
+      },
+      {
+        'name':"Blank",
+        'duration':1,
+        'lines': [
+          {
+            'name':"top",
+            'format':"",
+          },
+          {
+            'name':"bottom",
+            'variables': [ "position" ],
+            'format':"{0}",
+            'justification':"left",
+            'scroll':False
+          }
+        ]
+      },
+      {
+        'name':"Title",
+        'duration':10,
+        'lines': [
+          {
+            'name':"top",
+            'variables': [ "title" ],
+            'format':"{0}",
+            'justification':"left",
+            'scroll':True
+          },
+          {
+            'name':"bottom",
+            'variables': [ "position" ],
+            'format':"{0}",
+            'justification':"left",
+            'scroll':False
+          }
+        ]
+      }
+    ]
+}
+
+PAGE_Stop = {
+  'name':"Stop",
+  'pages':
+    [
+      {
+        'name':"Ready",
+        'duration':10,
+        'lines': [
+          {
+            'name':"top",
+            'variables': [ ],
+            'format':"Ready",
+            'justification':"center",
+            'scroll':False
+          },
+          {
+            'name':"bottom",
+            'variables': [ "current_time" ],
+            'format':"{0}",
+            'justification':"center",
+            'scroll':False
+          }
+        ]
+      },
+      {
+        'name':"IPADDR",
+        'duration':1.5,
+        'lines': [
+          {
+            'name':"top",
+            'variables': [ "current_ip" ],
+            'format':"{0}",
+            'justification':"center",
+            'scroll':False
+          },
+          {
+            'name':"bottom",
+            'variables': [ "current_time" ],
+            'format':"{0}",
+            'justification':"center",
+            'scroll':False
+          }
+        ]
+      }
+    ]
+}
 
 
 class RaspDac_Display:
@@ -93,7 +213,7 @@ class RaspDac_Display:
 
 			try:
 				# Connect to the LMS daemon
-				self.lmsserver = pylms.server.Server()
+				self.lmsserver = pylms.server.Server(LMS_SERVER)
 				self.lmsserver.connect()
 				self.lmsplayer = self.lmsserver.get_players()[0]
 				break
@@ -201,7 +321,9 @@ class RaspDac_Display:
 				lms_status = self.lmsplayer.get_mode()
 			except:
 				logging.debug("Could not get status from LMS daemon")
-				return { 'state':u"notrunning", 'artist':u"", 'title':u"", 'current':0, 'duration':0 }
+				return { 'state':u"stop", 'artist':u"", 'title':u"", 'current':0, 'duration':0, 'position':u"", 'bitrate':u"", 'type':u"", 'current_time':u""}
+
+
 
 
 	  	if lms_status == "play":
@@ -235,14 +357,31 @@ class RaspDac_Display:
 			if duration is None:
 				duration = 0
 
-			return { 'state':u"play", 'artist':artist, 'title':title, 'current':current, 'duration':duration, 'bitrate':bitrate, 'type':tracktype }
+			# if duration is not available, then suppress its display
+			if int(duration) > 0:
+				timepos = time.strftime("%M:%S", time.gmtime(int(current))) + "/" + time.strftime("%M:%S", time.gmtime(int(duration)))
+			else:
+				timepos = time.strftime("%M:%S", time.gmtime(int(current)))
+
+
+			return { 'state':u"play", 'artist':artist, 'title':title, 'current':current, 'duration':duration, 'position':timepos, 'bitrate':bitrate, 'type':tracktype }
 	  	else:
-			return { 'state':u"stop", 'artist':u"", 'title':u"", 'current':0, 'duration':0, 'bitrate':u"", 'type':u""}
+			return { 'state':u"stop", 'artist':u"", 'title':u"", 'current':0, 'duration':0, 'position':u"", 'bitrate':u"", 'type':u""}
 
 
 	def status(self):
 
 		status = self.status_lms()
+
+		if TIME24HOUR == True:
+			current_time = moment.utcnow().timezone(TIMEZONE).format("HH:mm").strip()
+		else:
+			current_time = moment.utcnow().timezone(TIMEZONE).format("h:m a").strip()
+
+		current_ip = commands.getoutput("ip -4 route get 1 | head -1 | cut -d' ' -f8 | tr -d '\n'").strip()
+
+		status['current_time'] = current_time
+		status['current_ip'] = current_ip
 
 		# Try MPD daemon first
 #		status = self.status_mpd()
@@ -377,146 +516,145 @@ if __name__ == '__main__':
 	try:
 
 
-		display_mode = "ARTIST"
-		beenplaying = True
-		currentArtist = ""
-		currentTitle = ""
-		cpos = ""
+#		display_mode = "ARTIST"
+#		beenplaying = True
+#		currentArtist = ""
+#		currentTitle = ""
+#		cpos = ""
 
-		ctime = ""
-		hesitate = False
-		hesitation_etime = 0
-		display_etime = 0
-		notplaying_state = "TIME"
-		ctime = ""
-		hesitation_etime = time.time() + HESITATION_TIME
+#		ctime = ""
+#		hesitate = False
+#		hesitation_etime = 0
+#		display_etime = 0
+#		notplaying_state = "TIME"
+#		ctime = ""
+#		hesitation_etime = time.time() + HESITATION_TIME
 
+		current_page_number = -1
+		current_line_number = 0
+		current_state = ""
+		state_change = False
+		page_expires = 0
+		hesitation_expires = 0
+		curlines = []
+		hesitate_expires = []
 
 		while True:
-			if TIME24HOUR == True:
-				current_time = moment.utcnow().timezone(TIMEZONE).format("HH:mm").strip()
-			else:
-				current_time = moment.utcnow().timezone(TIMEZONE).format("h:m a").strip()
-
-			current_ip = commands.getoutput("ip -4 route get 1 | head -1 | cut -d' ' -f8 | tr -d '\n'").strip()
-
+			# Get current state of the player
 			cstatus = rd.status()
 			state = cstatus.get('state')
 
+			# check for player state changed
+			if state != current_state:
+				current_state = state
+				state_change = True
+				current_page_number = -1
+				current_line_number = 0
+				page_expires = 0
+				curlines = []
+				hesitate_expires = []
+
+			# if not playing then display the PAGE_Stop pages
 			if state != "play":
-				if beenplaying:
-					beenplaying = False
-					currentArtist = ""
-					currentTitle = ""
-					notplaying_state = "TIME"
-					hesitation_etime = time.time() + NOTPLAYING_TIMEDISPLAY
-					cip = "" # This will guarantee that the IP gets displayed
-					ctime = "" # This will guarantee time gets displayed
-
-
-				if notplaying_state == "TIME":
-					# check to see if the time to switch the not playing display has been reached
-					if (hesitation_etime < time.time()):
-						notplaying_state = "IP"
-						hesitation_etime = time.time() + NOTPLAYING_IPDISPLAY
-						cip = ""
-					else:
-						# Only update display time if the time has changed
-						if current_time != ctime:
-							logging.info("Ready " + current_time)
-
-							dq.put(["Ready".center(DISPLAY_WIDTH), current_time.center(DISPLAY_WIDTH)])
-							ctime = current_time
-
-				if notplaying_state == "IP":
-					# check to see if the time to switch the not playing display has been reached
-					if (hesitation_etime < time.time()):
-						notplaying_state = "TIME"
-						hesitation_etime = time.time() + NOTPLAYING_TIMEDISPLAY
-						ctime = ""
-					else:
-						if current_ip != cip:
-							logging.info("IP " + current_ip)
-							dq.put([current_ip.center(DISPLAY_WIDTH), current_time.center(DISPLAY_WIDTH)])
-							cip = current_ip
-
-				time.sleep(1)
-
+				current_pages = PAGE_Stop
 			else:
-				title = cstatus.get('title')
-				artist = cstatus.get('artist')
-				playing_song = artist + ": " + title
+				current_pages = PAGE_Play
 
-				current = cstatus.get("current")
-				duration = cstatus.get("duration")
+			# if page has expired then move to the next page
+			if page_expires < time.time():
+				current_page_number = current_page_number + 1
 
-				# if duration is not available, then suppress its display
-				if int(duration) > 0:
-					timepos = time.strftime("%M:%S", time.gmtime(int(current))) + "/" + time.strftime("%M:%S", time.gmtime(int(duration)))
+				# if on last page, return to first page
+				if current_page_number > len(current_pages['pages'])-1:
+					current_page_number = 0
+
+				page_expires = time.time() + current_pages['pages'][current_page_number]['duration']
+
+			# Set current_page
+			current_page = current_pages['pages'][current_page_number]
+
+			# Now display the lines from the current page
+			lines = []
+			for i in range(len(current_page['lines'])):
+
+				# make sure curlines is big enough.  curlines is used to detect when the display has changed
+				# if not expanded here it will cause an IndexError later if it has not already been initialized
+				while len(curlines) < len(current_page['lines']):
+					curlines.append("")
+
+				# make sure hesitate_expires is big enough as well
+				while len(hesitate_expires) < len(current_page['lines']):
+					hesitate_expires.append(0)
+
+				current_line = current_page['lines'][i]
+				try:
+					justification = current_line['justification']
+				except KeyError:
+					justification = "left"
+
+				try:
+					scroll = current_line['scroll']
+				except KeyError:
+					scroll = False
+
+				try:
+					variables = current_line['variables']
+				except KeyError:
+					variables = []
+
+				format = current_line['format']
+
+				# Get paramaters
+				# ignore KeyError exceptions if variable is unavailable
+				parms = []
+				try:
+					for j in range(len(current_line['variables'])):
+						try:
+							parms.append(cstatus[current_line['variables'][j]])
+						except KeyError:
+							pass
+				except KeyError:
+					pass
+
+				# create line to display
+				line = format.format(*parms)
+
+				# justify line
+				try:
+					if current_line['justification'] == "center":
+						line = "{0:^{1}}".format(line, DISPLAY_WIDTH)
+					elif current_line['justification'] == "right":
+						line = "{0:>{1}}".format(line, DISPLAY_WIDTH)
+				except KeyError:
+					pass
+
+				lines.append(line)
+
+				# determine whether to scroll or not
+				if lines[i] != curlines[i]:
+					curlines[i] = lines[i]
+					try:
+						if current_line['scroll']:
+							hesitate_expires[i] = time.time() + HESITATION_TIME
+						else:
+							hesitate_expires[i] = 0
+					except KeyError:
+						hesitate_expires[i] = 0
+
+			# Determine if the display should hesitate before scrolling
+			dispval = []
+			for i in range(len(lines)):
+				if hesitate_expires[i] < time.time():
+					dispval.append(lines[i])
 				else:
-					timepos = time.strftime("%M:%S", time.gmtime(int(current)))
+					dispval.append(lines[i][0:DISPLAY_WIDTH])
 
-				update_needed = False
-				if (beenplaying == False) or (currentTitle != title) or (currentArtist != artist):
-					beenplaying = True
-					currentTitle = title
-					currentArtist = artist
-					logging.info(current_time + " (local): " + playing_song)
-					display_mode = "ARTIST"
-					display_etime = time.time()+ARTIST_TIME
-					if (len(artist)>DISPLAY_WIDTH):
-						hesitation_etime = time.time()+HESITATION_TIME
-						hesitate=True
-						display = artist[0:DISPLAY_WIDTH]
-					elif (len(artist) > 0):
-						display = artist
-					else:
-						display_etime = 0 # force artist display to be skipped if the field is empty
-					update_needed = True
-				else:
-					# Only update display if the time position has changed
-					if timepos != cpos:
-						update_needed = True
-						cpos = timepos
+			# Send dispval to the queue
+#			logging.info("Putting: {0}".format(dispval))
+			dq.put(dispval)
 
-				if (hesitation_etime < time.time() and hesitate):
-					update_needed = True
-					hesitate = False
-					if display_mode == "ARTIST":
-						display = artist
-					else:
-						display = title
-
-
-				if display_etime < time.time():
-					update_needed = True
-					if display_mode == "ARTIST":
-						display_etime = time.time() + TITLE_TIME
-						if len(title) > 0:
-							display_mode = "TITLE"
-							display = title
-					else:
-						display_etime = time.time() + ARTIST_TIME
-						if len(artist) > 0:
-							display_mode = "ARTIST"
-							display = artist
-
-					if len(artist) == 0 and len(title) == 0:
-						# if neither artist and title contain values
-						display = "No song info"
-
-					if (len(display)>DISPLAY_WIDTH):
-						hesitate = True
-						hesitation_etime = time.time() + HESITATION_TIME
-						display = display[0:DISPLAY_WIDTH]
-
-				# Only update if one of the display items has changed
-				if update_needed:
-					# add new display items to display queue
-					dq.put([display, timepos])
-					update_needed = False
-
-				time.sleep(.25)
+			# sleep before next update
+			time.sleep(.25)
 
 
 	except KeyboardInterrupt:
@@ -538,4 +676,7 @@ if __name__ == '__main__':
 		time.sleep(2)
 		dq.put(["",""])
 		time.sleep(1)
-		GPIO.cleanup()
+		if DISPLAY_INSTALLED:
+			GPIO.cleanup()
+		else:
+			curses.endwin()
