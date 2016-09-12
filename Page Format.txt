@@ -1,4 +1,4 @@
-Page Design Notes
+The RaspDacDisplay code now allows the display to be configured to show content in a more flexible way.  Each state of the system (e.g. Play, Stop) has a PageList which is a collection of pages, each of which determines what to show, and how long to show it.  While in a particular state, the system walks through each page of a PageList, displaying the page for the duration specified within the Page definition.  Here is a quick description of each part of a PageList.
 
 PageList consists of...
   A name
@@ -19,12 +19,13 @@ A line consists of ...
 
 Example
 
-{ 'name':"Play",
+PAGE_Play = {
+  'name':"Play",
   'pages':
     [
       {
         'name':"Artist",
-        'duration':8,
+        'duration':6,
         'lines': [
           {
             'name':"top",
@@ -35,8 +36,8 @@ Example
           },
           {
             'name':"bottom",
-            'variables': [ "position", "duration" ],
-            'format':"{0}/{1}",
+            'variables': [ "position" ],
+            'format':"{0}",
             'justification':"left",
             'scroll':False
           }
@@ -52,7 +53,10 @@ Example
           },
           {
             'name':"bottom",
-            'format':"",
+            'variables': [ "position" ],
+            'format':"{0}",
+            'justification':"left",
+            'scroll':False
           }
         ]
       },
@@ -69,8 +73,8 @@ Example
           },
           {
             'name':"bottom",
-            'variables': [ "position", "duration" ],
-            'format':"{0}/{1}",
+            'variables': [ "position" ],
+            'format':"{0}",
             'justification':"left",
             'scroll':False
           }
@@ -78,3 +82,51 @@ Example
       }
     ]
 }
+
+PAGE_Stop = {
+  'name':"Stop",
+  'pages':
+    [
+      {
+        'name':"Ready",
+        'duration':10,
+        'lines': [
+          {
+            'name':"top",
+            'variables': [ ],
+            'format':"Ready",
+            'justification':"center",
+            'scroll':False
+          },
+          {
+            'name':"bottom",
+            'variables': [ "current_time" ],
+            'format':"{0}",
+            'justification':"center",
+            'scroll':False
+          }
+        ]
+      },
+      {
+        'name':"IPADDR",
+        'duration':1.5,
+        'lines': [
+          {
+            'name':"top",
+            'variables': [ "current_ip" ],
+            'format':"{0}",
+            'justification':"center",
+            'scroll':False
+          },
+          {
+            'name':"bottom",
+            'variables': [ "current_time" ],
+            'format':"{0}",
+            'justification':"center",
+            'scroll':False
+          }
+        ]
+      }
+    ]
+}
+
