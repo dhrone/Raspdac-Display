@@ -27,6 +27,7 @@ STARTUP_MSG = "Raspdac\nStarting"
 ARTIST_TIME = 8.0 # Amount of time to display Artist name (in seconds)
 TITLE_TIME = 10.0 # Amount of time to display the Title  (in seconds)
 HESITATION_TIME = 2.5 # Amount of time to hesistate before scrolling (in seconds)
+ANIMATION_SMOOTHING = .24 # Amount of time before repainting display
 NOTPLAYING_TIMEDISPLAY = 8.0 # Amount of time to display Time
 NOTPLAYING_IPDISPLAY   = 1.5 # Amount of time to display IP address
 
@@ -53,7 +54,25 @@ LOGLEVEL=logging.INFO
 #LOGLEVEL=logging.WARNING
 #LOGLEVEL=logging.CRITICAL
 
-LMS_SERVER = "192.168.254.251"
+
+#Configure which music services to monitor
+MPD_ENABLED = False
+MPD_SERVER = localhost
+MPD_PORT = 6600
+
+SPOP_ENABLED = False
+SPOP_SERVER = localhost
+SPOP_PORT = 6602
+
+LMS_ENABLED = True
+LMS_SERVER = localhost
+LMS_PORT = 9090
+LMS_USER = ""
+LMS_PASSWORD = ""
+
+# Set this to MAC address of the Player you want to monitor.  
+# THis should be the MAC of the RaspDac system if using Max2Play with SqueezePlayer
+LMS_PLAYER = "00:01:02:aa:bb:cc" 
 
 
 # Page Definitions
@@ -181,131 +200,144 @@ class RaspDac_Display:
 		ATTEMPTS=3
 		# Will try to connect multiple times
 
-#		for i in range (1,ATTEMPTS):
-#			self.client = MPDClient(use_unicode=True)
-#
-#			try:
-#				# Connect to the MPD daemon
-#				self.client.connect("localhost", 6600)
-#				break
-#			except:
-#				logging.warning("Connection to MPD service attempt " + str(i) + " failed")
-#				time.sleep(2)
-#		else:
-#			# After the alloted number of attempts did not succeed in connecting
-#			logging.debug("Unable to connect to MPD service on startup")
-#
-#		# Now attempting to connect to the Spotify daemon
-#		# This may fail if Spotify is not configured.  That's ok!
-#		for i in range (1,ATTEMPTS):
-#			try:
-#				self.spotclient = telnetlib.Telnet("localhost",6602)
-#				self.spotclient.read_until("\n")
-#				break
-#			except:
-#				logging.warning("Connection to Spotify service attempt " + str(i) + " failed")
-#				time.sleep(2)
-#		else:
-#			# After the alloted number of attempts did not succeed in connecting
-#			logging.debug("Unable to connect to Spotify service on startup")
-#
-		for i in range (1,ATTEMPTS):
+		if MPD_ENABLED:
+			for i in range (1,ATTEMPTS):
+				self.client = MPDClient(use_unicode=True)
 
+				try:
+					# Connect to the MPD daemon
+					self.client.connect(MPD_SERVER, MPD_PORT)
+					break
+				except:
+					time.sleep(2)
+			else:
+				# After the alloted number of attempts did not succeed in connecting
+				logging.debug("Unable to connect to MPD service on startup")
+		
+		if SPOP_ENABLED:
+			# Now attempting to connect to the Spotify daemon
+			# This may fail if Spotify is not configured.  That's ok!
+			for i in range (1,ATTEMPTS):
+				try:
+					self.spotclient = telnetlib.Telnet(SPOP_SERVER,SPOP_PORT)
+					self.spotclient.read_until("\n")
+					break
+				except:
+					time.sleep(2)
+			else:
+				# After the alloted number of attempts did not succeed in connecting
+				logging.debug("Unable to connect to Spotify service on startup")
+
+		if LMS_ENABLED:
+			for i in range (1,ATTEMPTS):
+				try:
+					# Connect to the LMS daemon
+					self.lmsserver = pylms.server.Server(LMS_SERVER)
+					self.lmsserver.connect()
+					self.lmsplayer = self.lmsserver.get_players()[0]
+					break
+				except:
+					time.sleep(2)
+			else:
+				# After the alloted number of attempts did not succeed in connecting
+				logging.debug("Unable to connect to LMS service on startup")
+
+
+	def status_mpd(self):
+		# Try to get status from MPD daemon
+
+		try:
+			m_status = self.client.status()
+			m_currentsong = self.client.currentsong()
+		except:
+			# Attempt to reestablish connection to daemon
 			try:
-				# Connect to the LMS daemon
-				self.lmsserver = pylms.server.Server(LMS_SERVER)
-				self.lmsserver.connect()
-				self.lmsplayer = self.lmsserver.get_players()[0]
-				break
+				self.client.connect("localhost", 6600)
+				m_status=self.client.status()
+				m_currentsong = self.client.currentsong()
 			except:
-				logging.warning("Connection to LMS service attempt " + str(i) + " failed")
-				time.sleep(2)
-		else:
-			# After the alloted number of attempts did not succeed in connecting
-			logging.debug("Unable to connect to LMS service on startup")
+				logging.debug("Could not get status from MPD daemon")
+				return { 'state':u"stop", 'artist':u"", 'title':u"", 'current':0, 'duration':0, 'position':u"", 'bitrate':u"", 'type':u"", 'current_time':u""}
+
+		state = m_status.get('state')
+		if state == "play":
+		  artist = m_currentsong.get('artist')
+		  name = m_currentsong.get('name')
+
+		  # Trying to have something to display.  If artist is empty, try the
+		  # name field instead.
+		  if artist is None:
+		  	artist = name
+		  title = m_currentsong.get('title')
+
+		  (current, duration) = (m_status.get('time').split(":"))
+
+		  # since we are returning the info as a JSON formatted return, convert
+		  # any None's into reasonable values
+		  if artist is None: artist = u""
+		  if title is None: title = u""
+		  if current is None: current = 0
+		  if duration is None: duration = 0
+		  
+		# if duration is not available, then suppress its display
+          if int(duration) > 0:
+               timepos = time.strftime("%M:%S", time.gmtime(int(current))) + "/" + time.strftime("%M:%S", time.gmtime(int(duration)))
+          else:
+               timepos = time.strftime("%M:%S", time.gmtime(int(current)))
+		  
+		  return { 'state':state, 'artist':artist, 'title':title, 'current':current, 'position':timepos, 'duration': duration }
+	  	else:
+		  return { 'state':u"stop", 'artist':u"", 'title':u"", 'current':0, 'duration':0 }
+
+	def status_spop(self):
+		# Try to get status from SPOP daemon
+
+		try:
+			self.spotclient.write("status\n")
+			spot_status_string = self.spotclient.read_until("\n").strip()
+		except:
+			# Try to reestablish connection to daemon
+			try:
+				self.spotclient = telnetlib.Telnet("localhost",6602)
+				self.spotclient.read_until("\n")
+				self.spotclient.write("status\n")
+				spot_status_string = self.spotclient.read_until("\n").strip()
+			except:
+				logging.debug("Could not get status from SPOP daemon")
+				return { 'state':u"stop", 'artist':u"", 'title':u"", 'current':0, 'duration':0, 'position':u"", 'bitrate':u"", 'type':u"", 'current_time':u""}
+
+		spot_status = json.loads(spot_status_string)
+
+	  	if spot_status.get('status') == "playing":
+			artist = spot_status.get('artist')
+			title = spot_status.get('title')
+			current = spot_status.get('position')
+			duration = spot_status.get('duration')
+
+		  	# since we are returning the info as a JSON formatted return, convert
+		  	# any None's into reasonable values
+
+			if artist is None: artist = u""
+			if title is None: title = u""
+			if current is None: current = 0
+			if duration is None:
+				duration = 0
+			else:
+				# The spotify client returns time in 1000's of a second
+				# Need to adjust to seconds to be consistent with MPD
+				duration = duration / 1000
 
 
-#	def status_mpd(self):
-#		# Try to get status from MPD daemon
-#
-#		try:
-#			m_status = self.client.status()
-#			m_currentsong = self.client.currentsong()
-#		except:
-#			# Attempt to reestablish connection to daemon
-#			try:
-#				self.client.connect("localhost", 6600)
-#				m_status=self.client.status()
-#				m_currentsong = self.client.currentsong()
-#			except:
-#				logging.debug("Could not get status from MPD daemon")
-#				return { 'state':u"notrunning", 'artist':u"", 'title':u"", 'current':0, 'duration':0 }
-#
-#		state = m_status.get('state')
-#		if state == "play":
-#		  artist = m_currentsong.get('artist')
-#		  name = m_currentsong.get('name')
-#
-#		  # Trying to have something to display.  If artist is empty, try the
-#		  # name field instead.
-#		  if artist is None:
-#		  	artist = name
-#		  title = m_currentsong.get('title')
-#
-#		  (current, duration) = (m_status.get('time').split(":"))
-#
-#		  # since we are returning the info as a JSON formatted return, convert
-#		  # any None's into reasonable values
-#		  if artist is None: artist = u""
-#		  if title is None: title = u""
-#		  if current is None: current = 0
-#		  if duration is None: duration = 0
-#		  return { 'state':state, 'artist':artist, 'title':title, 'current':current, 'duration': duration }
-#	  	else:
-#		  return { 'state':u"stop", 'artist':u"", 'title':u"", 'current':0, 'duration':0 }
+			# if duration is not available, then suppress its display
+			if int(duration) > 0:
+				timepos = time.strftime("%M:%S", time.gmtime(int(current))) + "/" + time.strftime("%M:%S", time.gmtime(int(duration)))
+			else:
+				timepos = time.strftime("%M:%S", time.gmtime(int(current)))
 
-#	def status_spop(self):
-#		# Try to get status from SPOP daemon
-#
-#		try:
-#			self.spotclient.write("status\n")
-#			spot_status_string = self.spotclient.read_until("\n").strip()
-#		except:
-#			# Try to reestablish connection to daemon
-#			try:
-#				self.spotclient = telnetlib.Telnet("localhost",6602)
-#				self.spotclient.read_until("\n")
-#				self.spotclient.write("status\n")
-#				spot_status_string = self.spotclient.read_until("\n").strip()
-#			except:
-#				logging.debug("Could not get status from SPOP daemon")
-#				return { 'state':u"notrunning", 'artist':u"", 'title':u"", 'current':0, 'duration':0 }
-#
-#		spot_status = json.loads(spot_status_string)
-#
-#	  	if spot_status.get('status') == "playing":
-#			artist = spot_status.get('artist')
-#			title = spot_status.get('title')
-#			current = spot_status.get('position')
-#			duration = spot_status.get('duration')
-#
-#		  	# since we are returning the info as a JSON formatted return, convert
-#		  	# any None's into reasonable values
-#
-#			if artist is None: artist = u""
-#			if title is None: title = u""
-#			if current is None: current = 0
-#			if duration is None:
-#				duration = 0
-#			else:
-#				# The spotify client returns time in 1000's of a second
-#				# Need to adjust to seconds to be consistent with MPD
-#				duration = duration / 1000
-#
-#			return { 'state':u"play", 'artist':artist, 'title':title, 'current':current, 'duration': duration }
-#	  	else:
-#			return { 'state':u"stop", 'artist':u"", 'title':u"", 'current':0, 'duration':0 }
-#
+			return { 'state':u"play", 'artist':artist, 'title':title, 'current':current, 'duration': duration, 'position':timepos }
+	  	else:
+			return { 'state':u"stop", 'artist':u"", 'title':u"", 'current':0, 'duration':0 }
+
 
 	def status_lms(self):
 		# Try to get status from LMS daemon
@@ -322,8 +354,6 @@ class RaspDac_Display:
 			except:
 				logging.debug("Could not get status from LMS daemon")
 				return { 'state':u"stop", 'artist':u"", 'title':u"", 'current':0, 'duration':0, 'position':u"", 'bitrate':u"", 'type':u"", 'current_time':u""}
-
-
 
 
 	  	if lms_status == "play":
@@ -371,8 +401,33 @@ class RaspDac_Display:
 
 	def status(self):
 
-		status = self.status_lms()
 
+		# Try MPD daemon first
+		if MPD_ENABLED:
+			status = self.status_mpd()
+		else:
+			status = { 'state': "stopped" }
+			
+		# If MPD is stopped
+		if status.get('state') != "play":
+
+			# Try SPOP
+			if SPOP_ENABLED:
+				status = self.status_spop()
+			else
+				status = { 'state': "stopped" }
+			
+			# If SPOP is stopped	
+			if status.get('state') != "play"
+			
+				# Try LMS
+				if LMS_Enabled:
+					status = self.status_lms()
+				else:
+					status = { 'state': "stopped" }
+
+		# Add system variables
+		
 		if TIME24HOUR == True:
 			current_time = moment.utcnow().timezone(TIMEZONE).format("HH:mm").strip()
 		else:
@@ -383,17 +438,7 @@ class RaspDac_Display:
 		status['current_time'] = current_time
 		status['current_ip'] = current_ip
 
-		# Try MPD daemon first
-#		status = self.status_mpd()
-#
-#		# If MPD is stopped
-#		if status.get('state') != "play":
-#
-#			# Try SPOP
-#			status = self.status_spop()
-
 		return status
-
 
 
 def Display(q, l, c):
@@ -436,8 +481,8 @@ def Display(q, l, c):
 	  short_lines=True
 
 	  # Smooth animation
-	  if time.time() - prev_time < .08:
-		  time.sleep(.08-(time.time()-prev_time))
+	  if time.time() - prev_time < ANIMATION_SMOOTHING:
+		  time.sleep(ANIMATION_SMOOTHING-(time.time()-prev_time))
 	  try:
 		  # Determine if any lines have been udpated and if yes display them
 		  for i in range(len(item)):
