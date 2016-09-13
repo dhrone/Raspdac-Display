@@ -386,6 +386,11 @@ class RaspDac_Display:
 			if tracktype is None: tracktype = u""
 			if duration is None:
 				duration = 0
+				
+			### TO DO ###
+			# Need to add variables for playlist position and playlist count
+			# Need to add current volume
+
 
 			# if duration is not available, then suppress its display
 			if int(duration) > 0:
@@ -426,6 +431,7 @@ class RaspDac_Display:
 				else:
 					status = { 'state': "stopped" }
 
+		
 		# Add system variables
 		
 		if TIME24HOUR == True:
@@ -484,7 +490,7 @@ def Display(q, l, c):
 	  if time.time() - prev_time < ANIMATION_SMOOTHING:
 		  time.sleep(ANIMATION_SMOOTHING-(time.time()-prev_time))
 	  try:
-		  # Determine if any lines have been udpated and if yes display them
+		  # Determine if any lines have been updated and if yes display them
 		  for i in range(len(item)):
 
 			  # Convert from Unicode into UTF-8
@@ -559,21 +565,6 @@ if __name__ == '__main__':
 		sys.exit(0)
 
 	try:
-
-
-#		display_mode = "ARTIST"
-#		beenplaying = True
-#		currentArtist = ""
-#		currentTitle = ""
-#		cpos = ""
-
-#		ctime = ""
-#		hesitate = False
-#		hesitation_etime = 0
-#		display_etime = 0
-#		notplaying_state = "TIME"
-#		ctime = ""
-#		hesitation_etime = time.time() + HESITATION_TIME
 
 		current_page_number = -1
 		current_line_number = 0
