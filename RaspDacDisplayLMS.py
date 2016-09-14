@@ -232,9 +232,19 @@ class RaspDac_Display:
 			for i in range (1,ATTEMPTS):
 				try:
 					# Connect to the LMS daemon
-					self.lmsserver = pylms.server.Server(LMS_SERVER)
-					self.lmsserver.connect()
-					self.lmsplayer = self.lmsserver.get_players()[0]
+					self.lmsserver = pylms.server.Server(LMS_SERVER, LMS_PORT, LMS_USER, LMS_PASSWORD)					self.lmsserver.connect()
+	
+					# Find correct player
+					players == self.lmsserver.get_players()
+					for p in players:
+						### Need to find out how to get the MAC address from player
+						if p == LMS_PLAYER:
+							self.lmsplayer = p
+							break
+					if self.lmsplayer is None:
+						self.lmsplayer = self.lmsserver.get_players()[0]
+						if self.lmsplayer is None:
+							raise Exception('Could not find any LMS player')
 					break
 				except:
 					time.sleep(2)
@@ -252,7 +262,7 @@ class RaspDac_Display:
 		except:
 			# Attempt to reestablish connection to daemon
 			try:
-				self.client.connect("localhost", 6600)
+				self.client.connect(MPD_SERVER, MPD_PORT)
 				m_status=self.client.status()
 				m_currentsong = self.client.currentsong()
 			except:
@@ -298,7 +308,7 @@ class RaspDac_Display:
 		except:
 			# Try to reestablish connection to daemon
 			try:
-				self.spotclient = telnetlib.Telnet("localhost",6602)
+				self.spotclient = telnetlib.Telnet(SPOP_SERVER,SPOP_PORT)
 				self.spotclient.read_until("\n")
 				self.spotclient.write("status\n")
 				spot_status_string = self.spotclient.read_until("\n").strip()
@@ -347,9 +357,21 @@ class RaspDac_Display:
 		except:
 			# Try to reestablish connection to daemon
 			try:
-				self.lmsserver = pylms.server.Server()
+				self.lmsserver = pylms.server.Server(LMS_SERVER, LMS_PORT, LMS_USER, LMS_PASSWORD)
 				self.lmsserver.connect()
-				self.lmsplayer = self.lmsserver.get_players()[0]
+
+				# Find correct player
+				players == self.lmsserver.get_players()
+				for p in players:
+					### Need to find out how to get the MAC address from player
+					if p == LMS_PLAYER:
+						self.lmsplayer = p
+						break
+				if self.lmsplayer is None:
+					self.lmsplayer = self.lmsserver.get_players()[0]
+					if self.lmsplayer is None:
+						raise Exception('Could not find any LMS player')
+				
 				lms_status = self.lmsplayer.get_mode()
 			except:
 				logging.debug("Could not get status from LMS daemon")
