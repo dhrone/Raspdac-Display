@@ -57,22 +57,22 @@ LOGLEVEL=logging.INFO
 
 #Configure which music services to monitor
 MPD_ENABLED = False
-MPD_SERVER = localhost
+MPD_SERVER = "localhost"
 MPD_PORT = 6600
 
 SPOP_ENABLED = False
-SPOP_SERVER = localhost
+SPOP_SERVER = "localhost"
 SPOP_PORT = 6602
 
 LMS_ENABLED = True
-LMS_SERVER = localhost
+LMS_SERVER = "localhost"
 LMS_PORT = 9090
 LMS_USER = ""
 LMS_PASSWORD = ""
 
-# Set this to MAC address of the Player you want to monitor.  
+# Set this to MAC address of the Player you want to monitor.
 # THis should be the MAC of the RaspDac system if using Max2Play with SqueezePlayer
-LMS_PLAYER = "00:01:02:aa:bb:cc" 
+LMS_PLAYER = "00:01:02:aa:bb:cc"
 
 
 # Page Definitions
@@ -213,7 +213,7 @@ class RaspDac_Display:
 			else:
 				# After the alloted number of attempts did not succeed in connecting
 				logging.debug("Unable to connect to MPD service on startup")
-		
+
 		if SPOP_ENABLED:
 			# Now attempting to connect to the Spotify daemon
 			# This may fail if Spotify is not configured.  That's ok!
@@ -261,33 +261,33 @@ class RaspDac_Display:
 
 		state = m_status.get('state')
 		if state == "play":
-		  artist = m_currentsong.get('artist')
-		  name = m_currentsong.get('name')
+			artist = m_currentsong.get('artist')
+			name = m_currentsong.get('name')
 
-		  # Trying to have something to display.  If artist is empty, try the
-		  # name field instead.
-		  if artist is None:
-		  	artist = name
-		  title = m_currentsong.get('title')
+			# Trying to have something to display.  If artist is empty, try the
+			# name field instead.
+			if artist is None:
+				artist = name
+				title = m_currentsong.get('title')
 
-		  (current, duration) = (m_status.get('time').split(":"))
+			(current, duration) = (m_status.get('time').split(":"))
 
-		  # since we are returning the info as a JSON formatted return, convert
-		  # any None's into reasonable values
-		  if artist is None: artist = u""
-		  if title is None: title = u""
-		  if current is None: current = 0
-		  if duration is None: duration = 0
-		  
-		# if duration is not available, then suppress its display
-          if int(duration) > 0:
-               timepos = time.strftime("%M:%S", time.gmtime(int(current))) + "/" + time.strftime("%M:%S", time.gmtime(int(duration)))
-          else:
-               timepos = time.strftime("%M:%S", time.gmtime(int(current)))
-		  
-		  return { 'state':state, 'artist':artist, 'title':title, 'current':current, 'position':timepos, 'duration': duration }
-	  	else:
-		  return { 'state':u"stop", 'artist':u"", 'title':u"", 'current':0, 'duration':0 }
+			# since we are returning the info as a JSON formatted return, convert
+			# any None's into reasonable values
+		  	if artist is None: artist = u""
+		  	if title is None: title = u""
+		  	if current is None: current = 0
+		  	if duration is None: duration = 0
+
+		  	# if duration is not available, then surpress its display
+  			if int(duration) > 0:
+				timepos = time.strftime("%M:%S", time.gmtime(int(current))) + "/" + time.strftime("%M:%S", time.gmtime(int(duration)))
+			else:
+				timepos = time.strftime("%M:%S", time.gmtime(int(current)))
+
+			return { 'state':state, 'artist':artist, 'title':title, 'current':current, 'position':timepos, 'duration': duration }
+		else:
+			return { 'state':u"stop", 'artist':u"", 'title':u"", 'current':0, 'duration':0 }
 
 	def status_spop(self):
 		# Try to get status from SPOP daemon
@@ -407,27 +407,27 @@ class RaspDac_Display:
 			status = self.status_mpd()
 		else:
 			status = { 'state': "stopped" }
-			
+
 		# If MPD is stopped
 		if status.get('state') != "play":
 
 			# Try SPOP
 			if SPOP_ENABLED:
 				status = self.status_spop()
-			else
+			else:
 				status = { 'state': "stopped" }
-			
-			# If SPOP is stopped	
-			if status.get('state') != "play"
-			
+
+			# If SPOP is stopped
+			if status.get('state') != "play":
+
 				# Try LMS
-				if LMS_Enabled:
+				if LMS_ENABLED:
 					status = self.status_lms()
 				else:
 					status = { 'state': "stopped" }
 
 		# Add system variables
-		
+
 		if TIME24HOUR == True:
 			current_time = moment.utcnow().timezone(TIMEZONE).format("HH:mm").strip()
 		else:
