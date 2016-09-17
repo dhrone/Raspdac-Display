@@ -9,6 +9,7 @@ import pylms
 from pylms import server
 from pylms import player
 import telnetlib
+from socket import error as socket_error
 
 try:
 	import RPi.GPIO as GPIO
@@ -24,12 +25,8 @@ import sys
 
 STARTUP_MSG = "Raspdac\nStarting"
 
-ARTIST_TIME = 8.0 # Amount of time to display Artist name (in seconds)
-TITLE_TIME = 10.0 # Amount of time to display the Title  (in seconds)
 HESITATION_TIME = 2.5 # Amount of time to hesistate before scrolling (in seconds)
-ANIMATION_SMOOTHING = .24 # Amount of time before repainting display
-NOTPLAYING_TIMEDISPLAY = 8.0 # Amount of time to display Time
-NOTPLAYING_IPDISPLAY   = 1.5 # Amount of time to display IP address
+ANIMATION_SMOOTHING = .15 # Amount of time before repainting display
 
 # The Winstar display shipped with the RaspDac is capable of two lines of display
 # when the 5x8 font is used.  This code assumes that is what you will be using.
@@ -49,8 +46,8 @@ TIME24HOUR=False
 #TIMEZONE="Europe/Paris"
 
 # Logging level
-#LOGLEVEL=logging.DEBUG
-LOGLEVEL=logging.INFO
+LOGLEVEL=logging.DEBUG
+#LOGLEVEL=logging.INFO
 #LOGLEVEL=logging.WARNING
 #LOGLEVEL=logging.CRITICAL
 
@@ -72,7 +69,8 @@ LMS_PASSWORD = ""
 
 # Set this to MAC address of the Player you want to monitor.
 # THis should be the MAC of the RaspDac system if using Max2Play with SqueezePlayer
-LMS_PLAYER = "00:01:02:aa:bb:cc"
+#LMS_PLAYER = "00:01:02:aa:bb:cc"
+LMS_PLAYER = "b8:27:eb:c4:25:8c"
 
 
 # Page Definitions
@@ -81,13 +79,13 @@ PAGE_Play = {
   'pages':
     [
       {
-        'name':"Artist",
+        'name':"Album",
         'duration':6,
         'lines': [
           {
             'name':"top",
-            'variables': [ "artist" ],
-            'format':"{0}",
+            'variables': [ "album" ],
+            'format':"Album: {0}",
             'justification':"left",
             'scroll':True
           },
@@ -102,7 +100,44 @@ PAGE_Play = {
       },
       {
         'name':"Blank",
-        'duration':1,
+        'duration':0.5,
+        'lines': [
+          {
+            'name':"top",
+            'format':"",
+          },
+          {
+            'name':"bottom",
+            'variables': [ "position" ],
+            'format':"{0}",
+            'justification':"left",
+            'scroll':False
+          }
+        ]
+      },
+      {
+        'name':"Artist",
+        'duration':10,
+        'lines': [
+          {
+            'name':"top",
+            'variables': [ "artist" ],
+            'format':"Artist: {0}",
+            'justification':"left",
+            'scroll':True
+          },
+          {
+            'name':"bottom",
+            'variables': [ "position" ],
+            'format':"{0}",
+            'justification':"left",
+            'scroll':False
+          }
+        ]
+      },
+      {
+        'name':"Blank",
+        'duration':0.5,
         'lines': [
           {
             'name':"top",
@@ -124,7 +159,7 @@ PAGE_Play = {
           {
             'name':"top",
             'variables': [ "title" ],
-            'format':"{0}",
+            'format':"Title: {0}",
             'justification':"left",
             'scroll':True
           },
@@ -236,10 +271,10 @@ class RaspDac_Display:
 					self.lmsserver.connect()
 
 					# Find correct player
-					players == self.lmsserver.get_players()
+					players = self.lmsserver.get_players()
 					for p in players:
 						### Need to find out how to get the MAC address from player
-						if p == LMS_PLAYER:
+						if p.get_ref() == LMS_PLAYER:
 							self.lmsplayer = p
 							break
 					if self.lmsplayer is None:
@@ -247,7 +282,8 @@ class RaspDac_Display:
 						if self.lmsplayer is None:
 							raise Exception('Could not find any LMS player')
 					break
-				except:
+				except socket_error:
+					logging.debug("Connect attempt {0} to LMS server failed".format(i))
 					time.sleep(2)
 			else:
 				# After the alloted number of attempts did not succeed in connecting
@@ -362,10 +398,10 @@ class RaspDac_Display:
 				self.lmsserver.connect()
 
 				# Find correct player
-				players == self.lmsserver.get_players()
+				players = self.lmsserver.get_players()
 				for p in players:
 					### Need to find out how to get the MAC address from player
-					if p == LMS_PLAYER:
+					if p.get_ref() == LMS_PLAYER:
 						self.lmsplayer = p
 						break
 				if self.lmsplayer is None:
@@ -374,9 +410,9 @@ class RaspDac_Display:
 						raise Exception('Could not find any LMS player')
 
 				lms_status = self.lmsplayer.get_mode()
-			except:
+			except socket_error:
 				logging.debug("Could not get status from LMS daemon")
-				return { 'state':u"stop", 'artist':u"", 'title':u"", 'current':0, 'duration':0, 'position':u"", 'bitrate':u"", 'type':u"", 'current_time':u""}
+				return { 'state':u"stop", 'artist':u"", 'title':u"", 'album':u"", 'current':0, 'duration':0, 'position':u"", 'bitrate':u"", 'type':u"", 'current_time':u""}
 
 
 	  	if lms_status == "play":
@@ -384,6 +420,7 @@ class RaspDac_Display:
 
 			artist = urllib.unquote(str(self.lmsplayer.request("artist ?", True))).decode('utf-8')
 			title = urllib.unquote(str(self.lmsplayer.request("title ?", True))).decode('utf-8')
+			album = urllib.unquote(str(self.lmsplayer.request("album ?", True))).decode('utf-8')
 			current = self.lmsplayer.get_time_elapsed()
 			duration = self.lmsplayer.get_track_duration()
 			url = self.lmsplayer.get_track_path()
@@ -404,6 +441,7 @@ class RaspDac_Display:
 
 			if artist is None: artist = u""
 			if title is None: title = u""
+			if album is None: album = u""
 			if current is None: current = 0
 			if bitrate is None: bitrate = u""
 			if tracktype is None: tracktype = u""
@@ -422,9 +460,9 @@ class RaspDac_Display:
 				timepos = time.strftime("%M:%S", time.gmtime(int(current)))
 
 
-			return { 'state':u"play", 'artist':artist, 'title':title, 'current':current, 'duration':duration, 'position':timepos, 'bitrate':bitrate, 'type':tracktype }
+			return { 'state':u"play", 'artist':artist, 'title':title, 'album':album, 'current':current, 'duration':duration, 'position':timepos, 'bitrate':bitrate, 'type':tracktype }
 	  	else:
-			return { 'state':u"stop", 'artist':u"", 'title':u"", 'current':0, 'duration':0, 'position':u"", 'bitrate':u"", 'type':u""}
+			return { 'state':u"stop", 'artist':u"", 'title':u"", 'album':u"", 'current':0, 'duration':0, 'position':u"", 'bitrate':u"", 'type':u""}
 
 
 	def status(self):
@@ -584,7 +622,8 @@ if __name__ == '__main__':
 	except:
 		#e = sys.exc_info()[0]
 		#logging.critical("Received exception: %s" % e)
-		logging.critical("Unable to initialize RaspDac Display.  Exiting...")
+		e = sys.exc_info()[0]
+		logging.critical("Caught {0}. Unable to initialize RaspDac Display.  Exiting...".format(e))
 		sys.exit(0)
 
 	try:
