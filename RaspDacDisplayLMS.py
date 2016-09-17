@@ -62,7 +62,7 @@ SPOP_SERVER = "localhost"
 SPOP_PORT = 6602
 
 LMS_ENABLED = True
-LMS_SERVER = "localhost"
+LMS_SERVER = "max2play.local"
 LMS_PORT = 9090
 LMS_USER = ""
 LMS_PASSWORD = ""
@@ -74,13 +74,13 @@ LMS_PLAYER = "b8:27:eb:c4:25:8c"
 
 
 # Page Definitions
-PAGE_Play = {
+PAGES_Play = {
   'name':"Play",
   'pages':
     [
       {
         'name':"Album",
-        'duration':6,
+        'duration':10,
         'lines': [
           {
             'name':"top",
@@ -175,7 +175,7 @@ PAGE_Play = {
     ]
 }
 
-PAGE_Stop = {
+PAGES_Stop = {
   'name':"Stop",
   'pages':
     [
@@ -222,6 +222,32 @@ PAGE_Stop = {
     ]
 }
 
+PAGES_Volume = {
+  'name':"Volume",
+  'pages':
+    [
+      {
+        'name':"Volume",
+        'duration':2,
+        'lines': [
+          {
+            'name':"top",
+            'variables': [ ],
+            'format':"Volume",
+            'justification':"center",
+            'scroll':False
+          },
+          {
+            'name':"bottom",
+            'variables': [ "volume" ],
+            'format':"{0}",
+            'justification':"center",
+            'scroll':False
+          }
+        ]
+      }
+    ]
+}
 
 class RaspDac_Display:
 
@@ -315,7 +341,8 @@ class RaspDac_Display:
 			# name field instead.
 			if artist is None:
 				artist = name
-				title = m_currentsong.get('title')
+
+			title = m_currentsong.get('title')
 
 			(current, duration) = (m_status.get('time').split(":"))
 
@@ -412,7 +439,7 @@ class RaspDac_Display:
 				lms_status = self.lmsplayer.get_mode()
 			except socket_error:
 				logging.debug("Could not get status from LMS daemon")
-				return { 'state':u"stop", 'artist':u"", 'title':u"", 'album':u"", 'current':0, 'duration':0, 'position':u"", 'bitrate':u"", 'type':u"", 'current_time':u""}
+				return { 'state':u"stop", 'artist':u"", 'title':u"", 'album':u"", 'current':0, 'duration':0, 'position':u"", 'volume':0, 'playlist_position':0, 'playlist_count':0, 'bitrate':u"", 'type':u"", 'current_time':u""}
 
 
 	  	if lms_status == "play":
@@ -421,6 +448,9 @@ class RaspDac_Display:
 			artist = urllib.unquote(str(self.lmsplayer.request("artist ?", True))).decode('utf-8')
 			title = urllib.unquote(str(self.lmsplayer.request("title ?", True))).decode('utf-8')
 			album = urllib.unquote(str(self.lmsplayer.request("album ?", True))).decode('utf-8')
+			playlist_position = int(self.lmsplayer.request("playlist index ?"))+1
+			playlist_count = self.lmsplayer.playlist_track_count()
+			volume = self.lmsplayer.get_volume()
 			current = self.lmsplayer.get_time_elapsed()
 			duration = self.lmsplayer.get_track_duration()
 			url = self.lmsplayer.get_track_path()
@@ -443,15 +473,11 @@ class RaspDac_Display:
 			if title is None: title = u""
 			if album is None: album = u""
 			if current is None: current = 0
+			if volume is None: volume = 0
 			if bitrate is None: bitrate = u""
 			if tracktype is None: tracktype = u""
 			if duration is None:
 				duration = 0
-
-			### TO DO ###
-			# Need to add variables for playlist position and playlist count
-			# Need to add current volume
-
 
 			# if duration is not available, then suppress its display
 			if int(duration) > 0:
@@ -460,9 +486,9 @@ class RaspDac_Display:
 				timepos = time.strftime("%M:%S", time.gmtime(int(current)))
 
 
-			return { 'state':u"play", 'artist':artist, 'title':title, 'album':album, 'current':current, 'duration':duration, 'position':timepos, 'bitrate':bitrate, 'type':tracktype }
+			return { 'state':u"play", 'artist':artist, 'title':title, 'album':album, 'current':current, 'duration':duration, 'position':timepos, 'volume':volume, 'playlist_position':playlist_position, 'playlist_count':playlist_count, 'bitrate':bitrate, 'type':tracktype }
 	  	else:
-			return { 'state':u"stop", 'artist':u"", 'title':u"", 'album':u"", 'current':0, 'duration':0, 'position':u"", 'bitrate':u"", 'type':u""}
+			return { 'state':u"stop", 'artist':u"", 'title':u"", 'album':u"", 'current':0, 'duration':0, 'position':u"", 'volume':0, 'playlist_position':0, 'playlist_count':0, 'bitrate':u"", 'type':u""}
 
 
 	def status(self):
@@ -631,7 +657,7 @@ if __name__ == '__main__':
 		current_page_number = -1
 		current_line_number = 0
 		current_state = ""
-		state_change = False
+		current_volume = 0
 		page_expires = 0
 		hesitation_expires = 0
 		curlines = []
@@ -641,22 +667,30 @@ if __name__ == '__main__':
 			# Get current state of the player
 			cstatus = rd.status()
 			state = cstatus.get('state')
+			try:
+				volume = cstatus.get('volume')
+			except:
+				volume = 0
 
 			# check for player state changed
-			if state != current_state:
+			if state != current_state or current_volume != volume:
 				current_state = state
-				state_change = True
 				current_page_number = -1
 				current_line_number = 0
 				page_expires = 0
 				curlines = []
 				hesitate_expires = []
 
-			# if not playing then display the PAGE_Stop pages
-			if state != "play":
-				current_pages = PAGE_Stop
+			# if volume changing briefly override display with volume values
+			if current_volume != volume:
+				current_volume = volume
+				current_pages = PAGES_Volume
+			# else if not playing then display the PAGES_Stop pages
+			elif state != "play":
+				current_pages = PAGES_Stop
+			# else display the PAGES_Playing pages
 			else:
-				current_pages = PAGE_Play
+				current_pages = PAGES_Play
 
 			# if page has expired then move to the next page
 			if page_expires < time.time():
