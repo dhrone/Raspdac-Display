@@ -37,8 +37,8 @@ DISPLAY_WIDTH = 16 # the character width of the display
 DISPLAY_HEIGHT = 2 # the number of lines on the display
 
 # This is where the log file will be written
-#LOGFILE='/var/log/RaspDacDisplay.log'
-LOGFILE='./log/RaspDacDisplay.log'
+LOGFILE='/var/log/RaspDacDisplay.log'
+#LOGFILE='./log/RaspDacDisplay.log'
 
 # Adjust this setting to localize the time display to your region
 TIMEZONE="US/Eastern"
@@ -46,8 +46,8 @@ TIME24HOUR=False
 #TIMEZONE="Europe/Paris"
 
 # Logging level
-LOGLEVEL=logging.DEBUG
-#LOGLEVEL=logging.INFO
+#LOGLEVEL=logging.DEBUG
+LOGLEVEL=logging.INFO
 #LOGLEVEL=logging.WARNING
 #LOGLEVEL=logging.CRITICAL
 
@@ -308,7 +308,7 @@ class RaspDac_Display:
 						if self.lmsplayer is None:
 							raise Exception('Could not find any LMS player')
 					break
-				except socket_error:
+				except (socket_error, AttributeError, IndexError):
 					logging.debug("Connect attempt {0} to LMS server failed".format(i))
 					time.sleep(2)
 			else:
@@ -437,7 +437,7 @@ class RaspDac_Display:
 						raise Exception('Could not find any LMS player')
 
 				lms_status = self.lmsplayer.get_mode()
-			except socket_error:
+			except (socket_error, AttributeError, IndexError):
 				logging.debug("Could not get status from LMS daemon")
 				return { 'state':u"stop", 'artist':u"", 'title':u"", 'album':u"", 'current':0, 'duration':0, 'position':u"", 'volume':0, 'playlist_position':0, 'playlist_count':0, 'bitrate':u"", 'type':u"", 'current_time':u""}
 
