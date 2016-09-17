@@ -673,10 +673,11 @@ if __name__ == '__main__':
 				volume = 0
 
 			# check for player state changed
-			if state != current_state or current_volume != volume:
+			if state != current_state:
 				current_state = state
 				current_page_number = -1
 				current_line_number = 0
+				current_volume = volume
 				page_expires = 0
 				curlines = []
 				hesitate_expires = []
@@ -685,6 +686,11 @@ if __name__ == '__main__':
 			if current_volume != volume:
 				current_volume = volume
 				current_pages = PAGES_Volume
+				current_page_number = -1
+				current_line_number = 0
+				page_expires = 0
+				curlines = []
+				hesitate_expires = []
 			# else if not playing then display the PAGES_Stop pages
 			elif state != "play":
 				current_pages = PAGES_Stop
