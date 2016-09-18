@@ -1,16 +1,16 @@
 # Raspdac-Display
 An alternate display program for the Raspdac from Audiophonics which uses a Winstar OLED 16x2 display
 
-The RaspDac is a Raspberry Pi audio player using a Sabre ES9023 DAC and running the excellent music distro from Volumio.  It uses a Winstar OLED WEH001602A as a display.   This python-based project is an alternate display program from what is provided by Audiophonics.
+The RaspDac is a Raspberry Pi audio player using a Sabre ES9023 DAC and capable of running several excellent music distros such as Volumio, RuneAudio, and Max2Play.  It uses a Winstar OLED WEH001602A as a display.   This python-based project is an alternate display program from what is provided by Audiophonics.
 
 ## Installation
 
 ### For Volumio
 
-   These instructions assume a working version of the Volumio distribution (V1.55) and that the Winstar OLED display has been wired to the Raspberry Pi 2 according to the instructions provided by Audiophonics at http://forum.audiophonics.fr/viewtopic.php?f=4&t=1492.  If you have wired the display to different pins, please make sure to adjust the GPIO pin assignments accordingly. Note: pin assignments for the V2 and V3 versions of the RaspDac are already encoded at the top of the Winstar_GraphicOLED.py file.
-   
+   These instructions assume a working version of the Volumio distribution (V1.55) and that the Winstar OLED display has been wired to the Raspberry Pi according to the instructions provided by Audiophonics at http://forum.audiophonics.fr/viewtopic.php?f=4&t=1492.  If you have wired the display to different pins, please make sure to adjust the GPIO pin assignments accordingly. Note: pin assignments for the V2 and V3 versions of the RaspDac are already encoded at the top of the Winstar_GraphicOLED.py file.
+
    Place RaspDacDisplay.py and WinstarOled.py in a directory of your choice (e.g. /home/pi).  Add RaspDacDisplay.py to /etc/rc.local to automate its startup on reboot.  It is a good idea to delay its start-up to allow the system to come up completely before it attempts to start.  The following examples uses a 20 second delay.
-  
+
    ```
    /etc/rc.local
    #!/bin/sh -e
@@ -26,44 +26,46 @@ The RaspDac is a Raspberry Pi audio player using a Sabre ES9023 DAC and running 
    #
    # By default this script does nothing.
    /var/www/command/player_wdog.sh startup & > /dev/null 2>&1
-   
+
    (sleep 20; python /home/pi/RaspDacDisplay.py) &
    exit 0
    ```
-   
+
    * Additional instructions:
-     * RaspDacDisplay.py currently is hardcoded to place it's log file in /var/log/RaspDacDisplay.log.
+     * RaspDacDisplay.py uses the variable LOGFILE to determine where to place it's log file.  The default is /var/log/RaspDacDisplay.log.
      * There are several adjusted variables at the beginning of RaspDacDisplay.py that you can modify for different behavior.  These are...
-       * ARTIST_TIME - Sets the amount of time in seconds the artist's name will display before switching to the title
-       * TITLE_TIME - Sets the amount of time in seconds the title will display before switching to the artist's name
        * HESITATION_TIME - Titles or artists which are wider than the display width get scrolled.  This variable sets how long the display should pause in seconds before the scrolling begins
+       * ANIMATION_SMOOTHING - Sets the speed the upper speed for display update.  Values between .1 and .25 seem to work well.
        * TIMEZONE - Sets what timezone should be used when displaying the current system time.  Possible values can be found in the /usr/share/zoneinfo directory. Examples...
         ```
         New York City.  TIMEZONE="US/Eastern"
         San Francisco.  TIMEZONE="US/Pacific"
         Paris.  TIMEZONE = "Europe/Paris"
         ```
-       
-     * The program relies upon two python packages that are not installed by default on the Volumio 1.55 distribution.  These are moment and python-mpd2.  They are most easily installed using the Python Package Manager (PIP). If you do not have pip installed you can add it using the following command.
+      * PAGES System:
+        * There is now a more flexible system in place to configure what gets displayed on the screen.  It uses a metaphor of a collection of pages that are displayed for each of the major modes of the system (stop, play, alert).  A more complete description of how to modify and create pages is included in the "Page Format.txt" file.  
+        * Note that ARTIST_TIME, and TITLE_TIME have been removed.  This functionality is now captured in the PAGES system
+
+
+     * The program relies upon three python packages that are not installed by default on the Volumio 1.55 distribution.  These are moment, pylms and python-mpd2.  They are most easily installed using the Python Package Manager (PIP). If you do not have pip installed you can add it using the following command.
       ```
       apt-get install python-setuptools && easy_install pip
       ```
      * With PIP installed you can install moment and python-mpd with the following commands.
       ```
       pip install moment
+      pip install pylms
       pip install python-mpd2
       ```
-     
-      
-       
+
     ### Usage
-   
-   ./python RaspDacDisplay.py & 
-   
+
+   ./python RaspDacDisplay.py &
+
    Starts the RaspDacDisplay as a background process
 
 ### For Runeaudio
-These instructions assume you are using a newly created image of the Runeaudio distribution (V0.3-BETA) and that the Winstar OLED display has been wired to the Raspberry Pi 2 or Pi3 according to the instructions provided by Audiophonics at http://forum.audiophonics.fr/viewtopic.php?f=4&t=1492.  If you have wired the display to different pins, please make sure to adjust the GPIO pin assignments accordingly.  Note: pin assignments for the V2 and V3 versions of the RaspDac are already encoded at the top of the Winstar_GraphicOLED.py file.
+These instructions assume you are using a newly created image of the Runeaudio distribution (V0.3-BETA) and that the Winstar OLED display has been wired to the Raspberry Pi 2 or Pi 3 according to the instructions provided by Audiophonics at http://forum.audiophonics.fr/viewtopic.php?f=4&t=1492.  If you have wired the display to different pins, please make sure to adjust the GPIO pin assignments accordingly.  Note: pin assignments for the V2 and V3 versions of the RaspDac are already encoded at the top of the Winstar_GraphicOLED.py file.
 
 There are several changes that need to be made to the Runeaudio distribution to get the RaspDac fully setup.  These directions will provide a step-by-step walkthrough of those changes.  Please note, they have only be tested on a Raspberry Pi 3 using the V0.3-BETA image with MD5 hash a072179a40613a5cbb277cc33d1ace9c.  There are some idiosyncrasies with this image that need to be addressed which may not be required in future versions.
 
@@ -77,9 +79,9 @@ Edit /boot/config.txt and uncomment the line related to the hifiberry-dac.  You 
   ```
   nano /boot/config.txt
   ```
-  
+
   Move the cursor down to the line that has #dtoverlay=hifiberry-dac, remove the # to uncomment that line, save the file and exit.
-  
+
   ```
   # Uncomment one of these lines to enable an audio interface
   dtoverlay=hifiberry-dac
@@ -117,7 +119,7 @@ Follow the instructions found at http://www.runeaudio.com/documentation/troubles
      :: Starting full system upgrade...
      resolving dependencies...
      looking for conflicting packages...
-     
+
      Packages (80) adwaita-icon-theme-3.20-1  alsa-lib-1.1.1-1  alsa-utils-1.1.1-1  at-spi2-atk-2.20.1-1  at-spi2-core-2.20.1-1
                    atk-2.20.0-1  bluez-5.39-1  bluez-utils-5.39-1  boost-libs-1.60.0-4  ca-certificates-mozilla-3.23-3
                    cmake-3.5.1-1  colord-1.3.2-1  curl-7.48.0-1  dconf-0.26.0-1  device-mapper-2.02.149-1  dhcpcd-6.10.2-1
@@ -135,12 +137,12 @@ Follow the instructions found at http://www.runeaudio.com/documentation/troubles
                    raspberrypi-firmware-tools-20160412-1  s-nail-14.8.8-1  shared-mime-info-1.6-1  smbclient-4.4.2-1
                    sqlite-3.12.1-1  sudo-1.8.16-1  tzdata-2016c-1  vala-0.32.0-1  wayland-protocols-1.3-1  webkitgtk-2.4.11-1
                    xorg-server-1.18.3-1  xorg-server-common-1.18.3-1  xorg-xinit-1.3.4-4
-     
+
      Total Download Size:   151.36 MiB
      Total Installed Size:  571.61 MiB
      Net Upgrade Size:        3.50 MiB
-     
-     :: Proceed with installation? [Y/n] 
+
+     :: Proceed with installation? [Y/n]
      ```
      Reminder: Do NOT proceed with the installation as it appears to destablize the system!!!
 
@@ -152,17 +154,18 @@ Follow the instructions found at http://www.runeaudio.com/documentation/troubles
   ```
   pacman -Sy python2-pip
   ```
-   * D. Add the moment and python-mpd2 packages.
+   * D. Add the moment, pylms and python-mpd2 packages.
   ```
   pip2 install moment
+  pip2 install pylms
   pip2 install python-mpd2
   ```
-  
+
     If you receive an error message when running the pip2 commands, you may need to repair the distutils installation.  This can be done by explicitly installing ez_setup.py.
   ```
   wget https://bootstrap.pypa.io/ez_setup.py -O - | python2
   ```
-  
+
 * Step six.  Retrieve the current version of the RaspDac_Display software from github
 ```
 mkdir /home/raspdac
@@ -180,7 +183,7 @@ cd /home/raspdac/Raspdac-Display-master/
      systemctl enable oled.service
      ```
      Note: you will be overwriting the official version of the rune_shutdown command.  If you attempt to pull the latest RuneAudio UI from github, it will fail unless you stash the change first.
-     
+
    * B.  Files for the power management function (RaspDac version V3 only)
      ```
      cp sds.service /usr/lib/systemd/system/
@@ -195,20 +198,21 @@ cd /home/raspdac/Raspdac-Display-master/
    ```
    reboot
    ```
- 
+
  * Additional instructions:
-   * RaspDacDisplay.py currently is hardcoded to place it's log file in /var/log/RaspDacDisplay.log.
-   * There are several adjusted variables at the beginning of RaspDacDisplay.py that you can modify for different behavior.  These are...
-     * ARTIST_TIME - Sets the amount of time in seconds the artist's name will display before switching to the title
-     * TITLE_TIME - Sets the amount of time in seconds the title will display before switching to the artist's name
+   * RaspDacDisplay.py uses the variable LOGFILE to determine where to place it's log file.  The default is /var/log/RaspDacDisplay.log.
+   * There are several variables you can adjust at the beginning of RaspDacDisplay.py to modify the software for different behavior.  These are...
      * HESITATION_TIME - Titles or artists which are wider than the display width get scrolled.  This variable sets how long the display should pause in seconds before the scrolling begins
+     * ANIMATION_SMOOTHING - Sets the speed the upper speed for display update.  Values between .1 and .25 seem to work well.
      * TIMEZONE - Sets what timezone should be used when displaying the current system time.  Possible values can be found in the /usr/share/zoneinfo directory. Examples...
       ```
       New York City.  TIMEZONE="US/Eastern"
       San Francisco.  TIMEZONE="US/Pacific"
       Paris.  TIMEZONE = "Europe/Paris"
       ```
-
+    * PAGES System:
+      * There is now a more flexible system in place to configure what gets displayed on the screen.  It uses a metaphor of a collection of pages that are displayed for each of the major modes of the system (stop, play, alert).  A more complete description of how to modify and create pages is included in the "Page Format.txt" file.  
+      * Note that ARTIST_TIME, and TITLE_TIME have been removed.  This functionality is now captured in the PAGES system
 
 
 

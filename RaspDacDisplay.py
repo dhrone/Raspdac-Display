@@ -5,8 +5,19 @@ import json
 import logging
 import commands
 from mpd import MPDClient
+import pylms
+from pylms import server
+from pylms import player
 import telnetlib
-import RPi.GPIO as GPIO
+from socket import error as socket_error
+
+try:
+	import RPi.GPIO as GPIO
+	DISPLAY_INSTALLED = True
+except:
+	import curses
+	DISPLAY_INSTALLED = False
+
 import Queue
 from threading import Thread
 import signal
@@ -14,11 +25,10 @@ import sys
 
 STARTUP_MSG = "Raspdac\nStarting"
 
-ARTIST_TIME = 8.0 # Amount of time to display Artist name (in seconds)
-TITLE_TIME = 10.0 # Amount of time to display the Title  (in seconds)
-HESITATION_TIME = 2.5 # Amount of time to hesistate before scrolling (in seconds)
-NOTPLAYING_TIMEDISPLAY = 8.0 # Amount of time to display Time
-NOTPLAYING_IPDISPLAY   = 1.5 # Amount of time to display IP address
+HESITATION_TIME = 2.5 # Amount of time in seconds to hesistate before scrolling
+ANIMATION_SMOOTHING = .15 # Amount of time in seconds before repainting display
+
+COOLING_PERIOD = 15 # Default amount of time in seconds before an alert message can be redisplayed
 
 # The Winstar display shipped with the RaspDac is capable of two lines of display
 # when the 5x8 font is used.  This code assumes that is what you will be using.
@@ -30,6 +40,7 @@ DISPLAY_HEIGHT = 2 # the number of lines on the display
 
 # This is where the log file will be written
 LOGFILE='/var/log/RaspDacDisplay.log'
+#LOGFILE='./log/RaspDacDisplay.log'
 
 # Adjust this setting to localize the time display to your region
 TIMEZONE="US/Eastern"
@@ -43,8 +54,214 @@ LOGLEVEL=logging.INFO
 #LOGLEVEL=logging.CRITICAL
 
 
+#Configure which music services to monitor
+# For Volumio and RuneAudio MPD and SPOP should be enabled and LMS disabled
+# for Max2Play if you are using the Logitech Music Service, then LMS should be enabled
+MPD_ENABLED = True
+MPD_SERVER = "localhost"
+MPD_PORT = 6600
+
+SPOP_ENABLED = True
+SPOP_SERVER = "localhost"
+SPOP_PORT = 6602
+
+LMS_ENABLED = False
+LMS_SERVER = "localhost"
+LMS_PORT = 9090
+LMS_USER = ""
+LMS_PASSWORD = ""
+
+# Set this to MAC address of the Player you want to monitor.
+# THis should be the MAC of the RaspDac system if using Max2Play with SqueezePlayer
+# Note: if you have another Logitech Media Server running in your network, it is entirely
+#       possible that your player has decided to join it, instead of the LMS on Max2Play
+#       To fix this, go to the SqueezeServer interface and change move the player to the
+#       correct server.
+LMS_PLAYER = "00:01:02:aa:bb:cc"
 
 
+# Page Definitions
+PAGES_Play = {
+  'name':"Play",
+  'pages':
+    [
+      {
+        'name':"Album",
+        'duration':10,
+        'lines': [
+          {
+            'name':"top",
+            'variables': [ "album" ],
+            'format':"Album: {0}",
+            'justification':"left",
+            'scroll':True
+          },
+          {
+            'name':"bottom",
+            'variables': [ "position" ],
+            'format':"{0}",
+            'justification':"left",
+            'scroll':False
+          }
+        ]
+      },
+      {
+        'name':"Blank",
+        'duration':0.5,
+        'lines': [
+          {
+            'name':"top",
+            'format':"",
+          },
+          {
+            'name':"bottom",
+            'variables': [ "position" ],
+            'format':"{0}",
+            'justification':"left",
+            'scroll':False
+          }
+        ]
+      },
+      {
+        'name':"Artist",
+        'duration':10,
+        'lines': [
+          {
+            'name':"top",
+            'variables': [ "artist" ],
+            'format':"Artist: {0}",
+            'justification':"left",
+            'scroll':True
+          },
+          {
+            'name':"bottom",
+            'variables': [ "position" ],
+            'format':"{0}",
+            'justification':"left",
+            'scroll':False
+          }
+        ]
+      },
+      {
+        'name':"Blank",
+        'duration':0.5,
+        'lines': [
+          {
+            'name':"top",
+            'format':"",
+          },
+          {
+            'name':"bottom",
+            'variables': [ "position" ],
+            'format':"{0}",
+            'justification':"left",
+            'scroll':False
+          }
+        ]
+      },
+      {
+        'name':"Title",
+        'duration':10,
+        'lines': [
+          {
+            'name':"top",
+            'variables': [ "title" ],
+            'format':"Title: {0}",
+            'justification':"left",
+            'scroll':True
+          },
+          {
+            'name':"bottom",
+            'variables': [ "position" ],
+            'format':"{0}",
+            'justification':"left",
+            'scroll':False
+          }
+        ]
+      }
+    ]
+}
+
+PAGES_Stop = {
+  'name':"Stop",
+  'pages':
+    [
+      {
+        'name':"Ready",
+        'duration':10,
+        'lines': [
+          {
+            'name':"top",
+            'variables': [ ],
+            'format':"Ready",
+            'justification':"center",
+            'scroll':False
+          },
+          {
+            'name':"bottom",
+            'variables': [ "current_time" ],
+            'format':"{0}",
+            'justification':"center",
+            'scroll':False
+          }
+        ]
+      },
+      {
+        'name':"IPADDR",
+        'duration':1.5,
+        'lines': [
+          {
+            'name':"top",
+            'variables': [ "current_ip" ],
+            'format':"{0}",
+            'justification':"center",
+            'scroll':False
+          },
+          {
+            'name':"bottom",
+            'variables': [ "current_time" ],
+            'format':"{0}",
+            'justification':"center",
+            'scroll':False
+          }
+        ]
+      }
+    ]
+}
+
+ALERT_Volume = {
+ 	'name':"Volume",
+	'alert': {
+  		'variable': "volume",
+		'type': "change",
+		'coolingperiod': 0
+	},
+	'interruptible':False,
+	'pages': [
+		{
+			'name':"Volume",
+        	'duration':2,
+        	'lines': [
+          		{
+            		'name':"top",
+            		'variables': [ ],
+            		'format':"Volume",
+            		'justification':"center",
+            		'scroll':False
+          		},
+          		{
+            		'name':"bottom",
+            		'variables': [ "volume" ],
+            		'format':"{0}",
+            		'justification':"center",
+            		'scroll':False
+          		}
+        	]
+      	}
+    ]
+}
+
+ALERT_LIST = [ ALERT_Volume ]
 
 class RaspDac_Display:
 
@@ -58,33 +275,59 @@ class RaspDac_Display:
 		ATTEMPTS=3
 		# Will try to connect multiple times
 
-		for i in range (1,ATTEMPTS):
-			self.client = MPDClient(use_unicode=True)
+		if MPD_ENABLED:
+			for i in range (1,ATTEMPTS):
+				self.client = MPDClient(use_unicode=True)
 
-			try:
-				# Connect to the MPD daemon
-				self.client.connect("localhost", 6600)
-				break
-			except:
-#				logging.warning("Connection to MPD service attempt " + str(i) + " failed")
-				time.sleep(2)
-		else:
-			# After the alloted number of attempts did not succeed in connecting
-			logging.debug("Unable to connect to MPD service on startup")
+				try:
+					# Connect to the MPD daemon
+					self.client.connect(MPD_SERVER, MPD_PORT)
+					break
+				except:
+					time.sleep(2)
+			else:
+				# After the alloted number of attempts did not succeed in connecting
+				logging.debug("Unable to connect to MPD service on startup")
 
-		# Now attempting to connect to the Spotify daemon
-		# This may fail if Spotify is not configured.  That's ok!
-		for i in range (1,ATTEMPTS):
-			try:
-				self.spotclient = telnetlib.Telnet("localhost",6602)
-				self.spotclient.read_until("\n")
-				break
-			except:
-#				logging.warning("Connection to Spotify service attempt " + str(i) + " failed")
-				time.sleep(2)
-		else:
-			# After the alloted number of attempts did not succeed in connecting
-			logging.debug("Unable to connect to Spotify service on startup")
+		if SPOP_ENABLED:
+			# Now attempting to connect to the Spotify daemon
+			# This may fail if Spotify is not configured.  That's ok!
+			for i in range (1,ATTEMPTS):
+				try:
+					self.spotclient = telnetlib.Telnet(SPOP_SERVER,SPOP_PORT)
+					self.spotclient.read_until("\n")
+					break
+				except:
+					time.sleep(2)
+			else:
+				# After the alloted number of attempts did not succeed in connecting
+				logging.debug("Unable to connect to Spotify service on startup")
+
+		if LMS_ENABLED:
+			for i in range (1,ATTEMPTS):
+				try:
+					# Connect to the LMS daemon
+					self.lmsserver = pylms.server.Server(LMS_SERVER, LMS_PORT, LMS_USER, LMS_PASSWORD)
+					self.lmsserver.connect()
+
+					# Find correct player
+					players = self.lmsserver.get_players()
+					for p in players:
+						### Need to find out how to get the MAC address from player
+						if p.get_ref() == LMS_PLAYER:
+							self.lmsplayer = p
+							break
+					if self.lmsplayer is None:
+						self.lmsplayer = self.lmsserver.get_players()[0]
+						if self.lmsplayer is None:
+							raise Exception('Could not find any LMS player')
+					break
+				except (socket_error, AttributeError, IndexError):
+					logging.debug("Connect attempt {0} to LMS server failed".format(i))
+					time.sleep(2)
+			else:
+				# After the alloted number of attempts did not succeed in connecting
+				logging.debug("Unable to connect to LMS service on startup")
 
 
 	def status_mpd(self):
@@ -96,35 +339,55 @@ class RaspDac_Display:
 		except:
 			# Attempt to reestablish connection to daemon
 			try:
-				self.client.connect("localhost", 6600)
+				self.client.connect(MPD_SERVER, MPD_PORT)
 				m_status=self.client.status()
 				m_currentsong = self.client.currentsong()
 			except:
 				logging.debug("Could not get status from MPD daemon")
-				return { 'state':u"notrunning", 'artist':u"", 'title':u"", 'current':0, 'duration':0 }
+				return { 'state':u"stop", 'artist':u"", 'title':u"", 'album':u"", 'current':0, 'duration':0, 'position':u"", 'volume':0, 'playlist_position':0, 'playlist_count':0, 'bitrate':u"", 'type':u"" }
 
 		state = m_status.get('state')
 		if state == "play":
-		  artist = m_currentsong.get('artist')
-		  name = m_currentsong.get('name')
+			artist = m_currentsong.get('artist')
+			name = m_currentsong.get('name')
 
-		  # Trying to have something to display.  If artist is empty, try the
-		  # name field instead.
-		  if artist is None:
-		  	artist = name
-		  title = m_currentsong.get('title')
+			# Trying to have something to display.  If artist is empty, try the
+			# name field instead.
+			if artist is None:
+				artist = name
 
-		  (current, duration) = (m_status.get('time').split(":"))
+			title = m_currentsong.get('title')
+			album = m_currentsong.get('album')
+			playlist_position = int(m_status.get('songid'))
+			playlist_count = int(m_status.get('playlistlength'))
+			volume = int(m_status.get('volume'))
+			bitrate = m_status.get('bitrate')
 
-		  # since we are returning the info as a JSON formatted return, convert
-		  # any None's into reasonable values
-		  if artist is None: artist = u""
-		  if title is None: title = u""
-		  if current is None: current = 0
-		  if duration is None: duration = 0
-		  return { 'state':state, 'artist':artist, 'title':title, 'current':current, 'duration': duration }
+			# Haven't found a way to get the file type from MPD
+			tracktype = u""
+
+			(current, duration) = (m_status.get('time').split(":"))
+
+			# since we are returning the info as a JSON formatted return, convert
+			# any None's into reasonable values
+			if artist is None: artist = u""
+			if title is None: title = u""
+			if album is None: album = u""
+			if current is None: current = 0
+			if volume is None: volume = 0
+			if bitrate is None: bitrate = u""
+			if tracktype is None: tracktype = u""
+			if duration is None: duration = 0
+
+			# if duration is not available, then suppress its display
+			if int(duration) > 0:
+				timepos = time.strftime("%M:%S", time.gmtime(int(current))) + "/" + time.strftime("%M:%S", time.gmtime(int(duration)))
+			else:
+				timepos = time.strftime("%M:%S", time.gmtime(int(current)))
+
+			return { 'state':u"play", 'artist':artist, 'title':title, 'album':album, 'current':current, 'duration':duration, 'position':timepos, 'volume':volume, 'playlist_position':playlist_position, 'playlist_count':playlist_count, 'bitrate':bitrate, 'type':tracktype }
 	  	else:
-		  return { 'state':u"stop", 'artist':u"", 'title':u"", 'current':0, 'duration':0 }
+			return { 'state':u"stop", 'artist':u"", 'title':u"", 'album':u"", 'current':0, 'duration':0, 'position':u"", 'volume':0, 'playlist_position':0, 'playlist_count':0, 'bitrate':u"", 'type':u""}
 
 	def status_spop(self):
 		# Try to get status from SPOP daemon
@@ -135,28 +398,40 @@ class RaspDac_Display:
 		except:
 			# Try to reestablish connection to daemon
 			try:
-				self.spotclient = telnetlib.Telnet("localhost",6602)
+				self.spotclient = telnetlib.Telnet(SPOP_SERVER,SPOP_PORT)
 				self.spotclient.read_until("\n")
 				self.spotclient.write("status\n")
 				spot_status_string = self.spotclient.read_until("\n").strip()
 			except:
 				logging.debug("Could not get status from SPOP daemon")
-				return { 'state':u"notrunning", 'artist':u"", 'title':u"", 'current':0, 'duration':0 }
+				return { 'state':u"stop", 'artist':u"", 'title':u"", 'album':u"", 'current':0, 'duration':0, 'position':u"", 'volume':0, 'playlist_position':0, 'playlist_count':0, 'bitrate':u"", 'type':u""}
 
 		spot_status = json.loads(spot_status_string)
 
 	  	if spot_status.get('status') == "playing":
 			artist = spot_status.get('artist')
 			title = spot_status.get('title')
+			album = spot_status.get('album')
 			current = spot_status.get('position')
 			duration = spot_status.get('duration')
+			playlist_position = spot_status.get('current_track')
+			playlist_count = spot_status.get('total_tracks')
+
+			# SPOP doesn't seem to have bitrate, track type, or volume available
+			bitrate = u""
+			tracktype = u""
+			volume = 0
 
 		  	# since we are returning the info as a JSON formatted return, convert
 		  	# any None's into reasonable values
 
 			if artist is None: artist = u""
 			if title is None: title = u""
+			if album is None: album = u""
 			if current is None: current = 0
+			if volume is None: volume = 0
+			if bitrate is None: bitrate = u""
+			if tracktype is None: tracktype = u""
 			if duration is None:
 				duration = 0
 			else:
@@ -164,24 +439,135 @@ class RaspDac_Display:
 				# Need to adjust to seconds to be consistent with MPD
 				duration = duration / 1000
 
-			return { 'state':u"play", 'artist':artist, 'title':title, 'current':current, 'duration': duration }
+			# if duration is not available, then suppress its display
+			if int(duration) > 0:
+				timepos = time.strftime("%M:%S", time.gmtime(int(current))) + "/" + time.strftime("%M:%S", time.gmtime(int(duration)))
+			else:
+				timepos = time.strftime("%M:%S", time.gmtime(int(current)))
+
+			return { 'state':u"play", 'artist':artist, 'title':title, 'album':album, 'current':current, 'duration':duration, 'position':timepos, 'volume':volume, 'playlist_position':playlist_position, 'playlist_count':playlist_count, 'bitrate':bitrate, 'type':tracktype }
 	  	else:
-			return { 'state':u"stop", 'artist':u"", 'title':u"", 'current':0, 'duration':0 }
+			return { 'state':u"stop", 'artist':u"", 'title':u"", 'album':u"", 'current':0, 'duration':0, 'position':u"", 'volume':0, 'playlist_position':0, 'playlist_count':0, 'bitrate':u"", 'type':u""}
+
+
+	def status_lms(self):
+		# Try to get status from LMS daemon
+
+		try:
+			lms_status = self.lmsplayer.get_mode()
+		except:
+			# Try to reestablish connection to daemon
+			try:
+				self.lmsserver = pylms.server.Server(LMS_SERVER, LMS_PORT, LMS_USER, LMS_PASSWORD)
+				self.lmsserver.connect()
+
+				# Find correct player
+				players = self.lmsserver.get_players()
+				for p in players:
+					### Need to find out how to get the MAC address from player
+					if p.get_ref() == LMS_PLAYER:
+						self.lmsplayer = p
+						break
+				if self.lmsplayer is None:
+					self.lmsplayer = self.lmsserver.get_players()[0]
+					if self.lmsplayer is None:
+						raise Exception('Could not find any LMS player')
+
+				lms_status = self.lmsplayer.get_mode()
+			except (socket_error, AttributeError, IndexError):
+				logging.debug("Could not get status from LMS daemon")
+				return { 'state':u"stop", 'artist':u"", 'title':u"", 'album':u"", 'current':0, 'duration':0, 'position':u"", 'volume':0, 'playlist_position':0, 'playlist_count':0, 'bitrate':u"", 'type':u"", 'current_time':u""}
+
+
+	  	if lms_status == "play":
+			import urllib
+
+			artist = urllib.unquote(str(self.lmsplayer.request("artist ?", True))).decode('utf-8')
+			title = urllib.unquote(str(self.lmsplayer.request("title ?", True))).decode('utf-8')
+			album = urllib.unquote(str(self.lmsplayer.request("album ?", True))).decode('utf-8')
+			playlist_position = int(self.lmsplayer.request("playlist index ?"))+1
+			playlist_count = self.lmsplayer.playlist_track_count()
+			volume = self.lmsplayer.get_volume()
+			current = self.lmsplayer.get_time_elapsed()
+			duration = self.lmsplayer.get_track_duration()
+			url = self.lmsplayer.get_track_path()
+
+			# Get bitrate and tracktype if they are available.  Try blocks used to prevent array out of bounds exception if values are not found
+			try:
+				bitrate = urllib.unquote(str(self.lmsplayer.request("songinfo 2 1 url:"+url+" tags:r", True))).decode('utf-8').split("bitrate:", 1)[1]
+			except:
+				bitrate = u""
+
+			try:
+				tracktype = urllib.unquote(str(self.lmsplayer.request("songinfo 2 1 url:"+url+" tags:o", True))).decode('utf-8').split("type:",1)[1]
+			except:
+				tracktype = u""
+
+		  	# since we are returning the info as a JSON formatted return, convert
+		  	# any None's into reasonable values
+
+			if artist is None: artist = u""
+			if title is None: title = u""
+			if album is None: album = u""
+			if current is None: current = 0
+			if volume is None: volume = 0
+			if bitrate is None: bitrate = u""
+			if tracktype is None: tracktype = u""
+			if duration is None: duration = 0
+
+			# if duration is not available, then suppress its display
+			if int(duration) > 0:
+				timepos = time.strftime("%M:%S", time.gmtime(int(current))) + "/" + time.strftime("%M:%S", time.gmtime(int(duration)))
+			else:
+				timepos = time.strftime("%M:%S", time.gmtime(int(current)))
+
+
+			return { 'state':u"play", 'artist':artist, 'title':title, 'album':album, 'current':current, 'duration':duration, 'position':timepos, 'volume':volume, 'playlist_position':playlist_position, 'playlist_count':playlist_count, 'bitrate':bitrate, 'type':tracktype }
+	  	else:
+			return { 'state':u"stop", 'artist':u"", 'title':u"", 'album':u"", 'current':0, 'duration':0, 'position':u"", 'volume':0, 'playlist_position':0, 'playlist_count':0, 'bitrate':u"", 'type':u""}
 
 
 	def status(self):
 
+
 		# Try MPD daemon first
-		status = self.status_mpd()
+		if MPD_ENABLED:
+			status = self.status_mpd()
+		else:
+			status = { 'state': "stopped" }
 
 		# If MPD is stopped
 		if status.get('state') != "play":
 
 			# Try SPOP
-			status = self.status_spop()
+			if SPOP_ENABLED:
+				status = self.status_spop()
+			else:
+				status = { 'state': "stopped" }
+
+			# If SPOP is stopped
+			if status.get('state') != "play":
+
+				# Try LMS
+				if LMS_ENABLED:
+					status = self.status_lms()
+				else:
+					status = { 'state': "stopped" }
+
+
+		# Add system variables
+
+		if TIME24HOUR == True:
+			current_time = moment.utcnow().timezone(TIMEZONE).format("HH:mm").strip()
+		else:
+			current_time = moment.utcnow().timezone(TIMEZONE).format("h:m a").strip()
+
+		current_ip = commands.getoutput("ip -4 route get 1 | head -1 | cut -d' ' -f8 | tr -d '\n'").strip()
+
+		status['current_time'] = current_time
+		status['current_ip'] = current_ip
 
 		return status
-
 
 
 def Display(q, l, c):
@@ -224,10 +610,10 @@ def Display(q, l, c):
 	  short_lines=True
 
 	  # Smooth animation
-	  if time.time() - prev_time < .08:
-		  time.sleep(.08-(time.time()-prev_time))
+	  if time.time() - prev_time < ANIMATION_SMOOTHING:
+		  time.sleep(ANIMATION_SMOOTHING-(time.time()-prev_time))
 	  try:
-		  # Determine if any lines have been udpated and if yes display them
+		  # Determine if any lines have been updated and if yes display them
 		  for i in range(len(item)):
 
 			  # Convert from Unicode into UTF-8
@@ -282,7 +668,7 @@ def Display(q, l, c):
 
 def sigterm_handler(_signo, _stack_frame):
         sys.exit(0)
-        
+
 if __name__ == '__main__':
         signal.signal(signal.SIGTERM, sigterm_handler)
         logging.basicConfig(format='%(asctime)s:%(levelname)s:%(message)s', filename=LOGFILE, level=LOGLEVEL)
@@ -298,152 +684,216 @@ if __name__ == '__main__':
 	except:
 		#e = sys.exc_info()[0]
 		#logging.critical("Received exception: %s" % e)
-		logging.critical("Unable to initialize RaspDac Display.  Exiting...")
+		e = sys.exc_info()[0]
+		logging.critical("Caught {0}. Unable to initialize RaspDac Display.  Exiting...".format(e))
 		sys.exit(0)
 
 	try:
 
+		current_page_number = -1
+		current_line_number = 0
+		page_expires = 0
+		hesitation_expires = 0
+		curlines = []
+		hesitate_expires = []
+		alert_mode = False
 
-		display_mode = "ARTIST"
-		beenplaying = True
-		currentArtist = ""
-		currentTitle = ""
-		cpos = ""
+		# Reset all of the alert message cooling values
+		for pl in ALERT_LIST:
+			pl['cooling_expires'] = 0
 
-		ctime = ""
-		hesitate = False
-		hesitation_etime = 0
-		display_etime = 0
-		notplaying_state = "TIME"
-		ctime = ""
-		hesitation_etime = time.time() + HESITATION_TIME
+		# Initialize previous state
+		prev_state = rd.status()
 
+		# Force the system to recognize the start state as a change
+		prev_state['state'] = ""
 
 		while True:
-			if TIME24HOUR == True:
-				current_time = moment.utcnow().timezone(TIMEZONE).format("HH:mm").strip()
-			else:
-				current_time = moment.utcnow().timezone(TIMEZONE).format("h:m a").strip()
-				
-			current_ip = commands.getoutput("ip -4 route get 1 | head -1 | cut -d' ' -f8 | tr -d '\n'").strip()
-
+			# Get current state of the player
 			cstatus = rd.status()
 			state = cstatus.get('state')
 
-			if state != "play":
-				if beenplaying:
-					beenplaying = False
-					currentArtist = ""
-					currentTitle = ""
-					notplaying_state = "TIME"
-					hesitation_etime = time.time() + NOTPLAYING_TIMEDISPLAY
-					cip = "" # This will guarantee that the IP gets displayed
-					ctime = "" # This will guarantee time gets displayed
+			alert_check = False
+			# Check to see if any alerts are triggered
+			for pl in ALERT_LIST:
 
 
-				if notplaying_state == "TIME":
-					# check to see if the time to switch the not playing display has been reached
-					if (hesitation_etime < time.time()):
-						notplaying_state = "IP"
-						hesitation_etime = time.time() + NOTPLAYING_IPDISPLAY
-						cip = ""
-					else:
-						# Only update display time if the time has changed
-						if current_time != ctime:
-							logging.info("Ready " + current_time)
+				# Check to see if alert is in its cooling period
+				if pl['cooling_expires'] < time.time():
 
-							dq.put(["Ready".center(DISPLAY_WIDTH), current_time.center(DISPLAY_WIDTH)])
-							ctime = current_time
+					# Use try block to skip page if variables are missing
+					try:
+						# Check to see what type of monitoring to perform
+						if pl['alert']['type'] == "change":
+							if cstatus[pl['alert']['variable']] != prev_state[pl['alert']['variable']]:
+								prev_state[pl['alert']['variable']] = cstatus[pl['alert']['variable']]
+								alert_check = True
+						elif pl['alert']['type'] == "above":
+							if cstatus[pl['alert']['variable']] > pl['alert']['values'][0]:
+								alert_check = True
+						elif pl['alert']['type'] == "below":
+							if cstatus[pl['alert']['variable']] < pl['alert']['values'][0]:
+								alert_check = True
+						elif pl['alert']['type'] == "range":
+							if cstatus[pl['alert']['variable']] > pl['alert']['values'][0] and cstatus[pl['alert']['variable']] < pl['alert']['values'][1]:
+								alert_check = True
 
-				if notplaying_state == "IP":
-					# check to see if the time to switch the not playing display has been reached
-					if (hesitation_etime < time.time()):
-						notplaying_state = "TIME"
-						hesitation_etime = time.time() + NOTPLAYING_TIMEDISPLAY
-						ctime = ""
-					else:
-						if current_ip != cip:
-							logging.info("IP " + current_ip)
-							dq.put([current_ip.center(DISPLAY_WIDTH), current_time.center(DISPLAY_WIDTH)])
-							cip = current_ip
+						if alert_check:
+							alert_mode = True
 
-				time.sleep(1)
+							# Set current_pages to the alert page
+							current_pages = pl
+							current_page_number = 0
+							current_line_number = 0
+							page_expires = time.time() + current_pages['pages'][current_page_number]['duration']
+							curlines = []
+							hesitate_expires = []
 
-			else:
-				title = cstatus.get('title')
-				artist = cstatus.get('artist')
-				playing_song = artist + ": " + title
+							# Set cooling expiry time.  If not coolingperiod directive, use default
+							try:
+								pl['cooling_expires'] = time.time() + pl['alert']['coolingperiod']
+							except KeyError:
+								pl['cooling_expires'] = time.time() + COOLING_PERIOD
 
-				current = cstatus.get("current")
-				duration = cstatus.get("duration")
+							# if an alert has been found, break out of the loop
+							# this has the effect of making the order of the list the priority of the messages
+							break
 
-				# if duration is not available, then suppress its display
-				if int(duration) > 0:
-					timepos = time.strftime("%M:%S", time.gmtime(int(current))) + "/" + time.strftime("%M:%S", time.gmtime(int(duration)))
+					except (KeyError, AttributeError, IndexError):
+						pass
+
+
+			# Set interruptible value.  If value not present, set to default value of True
+			try:
+				# interruptible is only an override until the page expires.  If page expires, allow page updates to continue.
+				if page_expires < time.time():
+					interruptible = True
+
+					# if page just expired on an alert page then force restore to current play state
+					if alert_mode:
+						alert_mode = False
+						prev_state['state'] = ""
 				else:
-					timepos = time.strftime("%M:%S", time.gmtime(int(current)))
+					interruptible = current_pages['interruptible']
+			except KeyError:
+				interruptible = True
 
-				update_needed = False
-				if (beenplaying == False) or (currentTitle != title) or (currentArtist != artist):
-					beenplaying = True
-					currentTitle = title
-					currentArtist = artist
-					logging.info(current_time + " (local): " + playing_song)
-					display_mode = "ARTIST"
-					display_etime = time.time()+ARTIST_TIME
-					if (len(artist)>DISPLAY_WIDTH):
-						hesitation_etime = time.time()+HESITATION_TIME
-						hesitate=True
-						display = artist[0:DISPLAY_WIDTH]
-					elif (len(artist) > 0):
-						display = artist
+			# check to see if we need to change the display to something new
+			if (alert_mode or state != prev_state['state']) and interruptible:
+				current_page_number = -1
+				current_line_number = 0
+				page_expires = 0
+				curlines = []
+				hesitate_expires = []
+
+				# if change caused by state change and not alert
+				if alert_mode == False:
+					prev_state['state'] = state
+
+					# Set to new display page
+					if state != "play":
+						current_pages = PAGES_Stop
+					# else display the PAGES_Playing pages
 					else:
-						display_etime = 0 # force artist display to be skipped if the field is empty
-					update_needed = True
+						current_pages = PAGES_Play
+
+			# if page has expired then move to the next page
+			if page_expires < time.time():
+				current_page_number = current_page_number + 1
+
+				# if on last page, return to first page
+				if current_page_number > len(current_pages['pages'])-1:
+					current_page_number = 0
+
+				page_expires = time.time() + current_pages['pages'][current_page_number]['duration']
+
+			# Set current_page
+			current_page = current_pages['pages'][current_page_number]
+
+			# Now display the lines from the current page
+			lines = []
+			for i in range(len(current_page['lines'])):
+
+				# make sure curlines is big enough.  curlines is used to detect when the display has changed
+				# if not expanded here it will cause an IndexError later if it has not already been initialized
+				while len(curlines) < len(current_page['lines']):
+					curlines.append("")
+
+				# make sure hesitate_expires is big enough as well
+				while len(hesitate_expires) < len(current_page['lines']):
+					hesitate_expires.append(0)
+
+				current_line = current_page['lines'][i]
+				try:
+					justification = current_line['justification']
+				except KeyError:
+					justification = "left"
+
+				try:
+					scroll = current_line['scroll']
+				except KeyError:
+					scroll = False
+
+				try:
+					variables = current_line['variables']
+				except KeyError:
+					variables = []
+
+				format = current_line['format']
+
+				# Get paramaters
+				# ignore KeyError exceptions if variable is unavailable
+				parms = []
+				try:
+					for j in range(len(current_line['variables'])):
+						try:
+							if type(cstatus[current_line['variables'][j]]) is unicode:
+								parms.append(cstatus[current_line['variables'][j]].encode('utf-8'))
+							else:
+								parms.append(cstatus[current_line['variables'][j]])
+						except KeyError:
+							pass
+				except KeyError:
+					pass
+
+				# create line to display
+				line = format.format(*parms).decode('utf-8')
+
+				# justify line
+				try:
+					if current_line['justification'] == "center":
+						line = "{0:^{1}}".format(line, DISPLAY_WIDTH)
+					elif current_line['justification'] == "right":
+						line = "{0:>{1}}".format(line, DISPLAY_WIDTH)
+				except KeyError:
+					pass
+
+				lines.append(line)
+
+				# determine whether to scroll or not
+				if lines[i] != curlines[i]:
+					curlines[i] = lines[i]
+					try:
+						if current_line['scroll']:
+							hesitate_expires[i] = time.time() + HESITATION_TIME
+						else:
+							hesitate_expires[i] = 0
+					except KeyError:
+						hesitate_expires[i] = 0
+
+			# Determine if the display should hesitate before scrolling
+			dispval = []
+			for i in range(len(lines)):
+				if hesitate_expires[i] < time.time():
+					dispval.append(lines[i])
 				else:
-					# Only update display if the time position has changed
-					if timepos != cpos:
-						update_needed = True
-						cpos = timepos
+					dispval.append(lines[i][0:DISPLAY_WIDTH])
 
-				if (hesitation_etime < time.time() and hesitate):
-					update_needed = True
-					hesitate = False
-					if display_mode == "ARTIST":
-						display = artist
-					else:
-						display = title
+			# Send dispval to the queue
+			dq.put(dispval)
 
-
-				if display_etime < time.time():
-					update_needed = True
-					if display_mode == "ARTIST":
-						display_etime = time.time() + TITLE_TIME
-						if len(title) > 0:
-							display_mode = "TITLE"
-							display = title
-					else:
-						display_etime = time.time() + ARTIST_TIME
-						if len(artist) > 0:
-							display_mode = "ARTIST"
-							display = artist
-
-					if len(artist) == 0 and len(title) == 0:
-						# if neither artist and title contain values
-						display = "No song info"
-
-					if (len(display)>DISPLAY_WIDTH):
-						hesitate = True
-						hesitation_etime = time.time() + HESITATION_TIME
-						display = display[0:DISPLAY_WIDTH]
-
-				# Only update if one of the display items has changed
-				if update_needed:
-					# add new display items to display queue
-					dq.put([display, timepos])
-					update_needed = False
-
-				time.sleep(.25)
+			# sleep before next update
+			time.sleep(.25)
 
 
 	except KeyboardInterrupt:
@@ -465,4 +915,7 @@ if __name__ == '__main__':
 		time.sleep(2)
 		dq.put(["",""])
 		time.sleep(1)
-		GPIO.cleanup()
+		if DISPLAY_INSTALLED:
+			GPIO.cleanup()
+		else:
+			curses.endwin()
