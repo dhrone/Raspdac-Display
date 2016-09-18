@@ -2,7 +2,15 @@ The RaspDacDisplay code now allows the display to be configured to show content 
 
 PageList consists of...
   A name
+  An alert directive (if the page is used to display an alert message)
+  Whether the page is interruptible or not (default is True).  Mainly used for alert messages.
   An array of Pages (in to be displayed order)
+
+  An alert directive consists of ...
+    The variable to monitor
+    The type of monitoring (change, above, below, range)
+    An array of values to compare against
+    A CoolingPeriod which controls how long the system must wait before displaying the alert again
 
 A Page consists of...
   A name
@@ -16,21 +24,45 @@ A line consists of ...
   A justification directive ("left", "right", "center")
   A scroll directive (True, False)
 
+ALERT_LIST consists of...
+  An array of PageLists each of which must have an alert directive
+
+To create a new PageList for a particular state, you modify what is assigned to the PAGE list variables (PAGE_Play, PAGE_Stop).  Note that PageLists use a combination of dictionary and array structures.  Be careful to make sure that you follow the formatting carefully so that the PageList structure can still be parsed.
+
+The variable values that you use within your PageLists must be returned by the status functions.  Currently the following variables are supported.
+  'state' - The current state of the system (e.g. play, stop)
+  'artist' - The name of the artist for the song that is currently playing
+  'title' - The name of the song that is currently playing
+  'album' - The name of the album that is currently playing
+  'current' - The amount of time the current song has been playing in seconds
+  'duration' - The length of the current song in seconds
+  'position' - A formatted combination of current and duration (e.g. ##:##/##:##)
+  'volume' - The current volume of the player
+  'playlist_position' - The number of the current track in the play list
+  'playlist_count' - The number of tracks currently in the play list
+  'bitrate' - The bitrate of the current track
+  'type' - The encoding type of the current track (e.g. FLAC, MP3)
+  'current_time' - The current local time (assuming TIMEZONE is set correctly)
+  'current_ip' - The current IP address of the system
+
+For Play and Stop states, the system walks through each of the Pages in the current state's page file, displaying page each for that pages duration.  If the state of the system changes while a Page is being displayed, the display immediately switches to display the first page of the new state.
+
+Alerting operates differently.  Each PageList in the ALERT_LIST represents a timely or urgent message that may need to be displayed based upon a condition that the specific PageList is monitoring.  This is specified in the alert directive for that particular PageList.  If the alert condition is met, that PageList is immediately displayed.  Normally, there is only one page per PageList in the ALERT_LIST and that Page will be set to not be interruptible.  This means that if the system state changes while an alert message is being displayed, the display will not update to show the new status until the alert page duration expires. To prevent an alert from monopolizing the display, there is also a CoolingPeriod value that can be set that will not allow the alert to occur even if the monitoring condition is still met.  The default CoolingPeriod is set by the COOLINGPERIOD variable.
 
 Example
 
-PAGE_Play = {
+PAGES_Play = {
   'name':"Play",
   'pages':
     [
       {
-        'name':"Artist",
-        'duration':6,
+        'name':"Album",
+        'duration':10,
         'lines': [
           {
             'name':"top",
-            'variables': [ "artist" ],
-            'format':"{0}",
+            'variables': [ "album" ],
+            'format':"Album: {0}",
             'justification':"left",
             'scroll':True
           },
@@ -45,7 +77,44 @@ PAGE_Play = {
       },
       {
         'name':"Blank",
-        'duration':1,
+        'duration':0.5,
+        'lines': [
+          {
+            'name':"top",
+            'format':"",
+          },
+          {
+            'name':"bottom",
+            'variables': [ "position" ],
+            'format':"{0}",
+            'justification':"left",
+            'scroll':False
+          }
+        ]
+      },
+      {
+        'name':"Artist",
+        'duration':10,
+        'lines': [
+          {
+            'name':"top",
+            'variables': [ "artist" ],
+            'format':"Artist: {0}",
+            'justification':"left",
+            'scroll':True
+          },
+          {
+            'name':"bottom",
+            'variables': [ "position" ],
+            'format':"{0}",
+            'justification':"left",
+            'scroll':False
+          }
+        ]
+      },
+      {
+        'name':"Blank",
+        'duration':0.5,
         'lines': [
           {
             'name':"top",
@@ -67,7 +136,7 @@ PAGE_Play = {
           {
             'name':"top",
             'variables': [ "title" ],
-            'format':"{0}",
+            'format':"Title: {0}",
             'justification':"left",
             'scroll':True
           },
@@ -83,7 +152,7 @@ PAGE_Play = {
     ]
 }
 
-PAGE_Stop = {
+PAGES_Stop = {
   'name':"Stop",
   'pages':
     [
@@ -130,3 +199,69 @@ PAGE_Stop = {
     ]
 }
 
+ALERT_Volume = {
+   	'name':"Volume",
+  	'alert': {
+    		'variable': "volume",
+		    'type': "change",
+        'coolingperiod': 0
+  	},
+  	'interruptible':False,
+  	'pages': [
+  		{
+  			'name':"Volume",
+          	'duration':2,
+          	'lines': [
+            		{
+              		'name':"top",
+              		'variables': [ ],
+              		'format':"Volume",
+              		'justification':"center",
+              		'scroll':False
+            		},
+            		{
+              		'name':"bottom",
+              		'variables': [ "volume" ],
+              		'format':"{0}",
+              		'justification':"center",
+              		'scroll':False
+            		}
+          	]
+        	}
+      ]
+  }
+
+ALERT_VolumeTooHigh = {
+  'name':"VolumeTooHigh",
+	'alert': {
+  		'variable': "volume",
+  		'type': "above",
+  		'values': [ 95 ],
+  		'coolingperiod': 15
+	},
+	'interruptible':False,
+	'pages': [
+		{
+			'name':"Volume",
+      'duration':5,
+    	'lines': [
+      		{
+        		'name':"top",
+        		'variables': [ ],
+        		'format':"Volume Too High",
+        		'justification':"center",
+        		'scroll':False
+      		},
+		      {
+        		'name':"bottom",
+        		'variables': [ "volume" ],
+        		'format':"{0}",
+        		'justification':"center",
+        		'scroll':False
+      		}
+    	]
+  	}
+  ]
+}
+
+ALERT_LIST = [ PAGES_Volume, PAGES_VolumeTooHigh ]

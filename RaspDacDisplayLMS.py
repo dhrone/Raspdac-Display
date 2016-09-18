@@ -25,8 +25,10 @@ import sys
 
 STARTUP_MSG = "Raspdac\nStarting"
 
-HESITATION_TIME = 2.5 # Amount of time to hesistate before scrolling (in seconds)
-ANIMATION_SMOOTHING = .15 # Amount of time before repainting display
+HESITATION_TIME = 2.5 # Amount of time in seconds to hesistate before scrolling
+ANIMATION_SMOOTHING = .15 # Amount of time in seconds before repainting display
+
+COOLING_PERIOD = 15 # Default amount of time in seconds before an alert message can be redisplayed
 
 # The Winstar display shipped with the RaspDac is capable of two lines of display
 # when the 5x8 font is used.  This code assumes that is what you will be using.
@@ -70,7 +72,8 @@ LMS_PASSWORD = ""
 # Set this to MAC address of the Player you want to monitor.
 # THis should be the MAC of the RaspDac system if using Max2Play with SqueezePlayer
 #LMS_PLAYER = "00:01:02:aa:bb:cc"
-LMS_PLAYER = "b8:27:eb:c4:25:8c"
+#LMS_PLAYER = "b8:27:eb:c4:25:8c"
+LMS_PLAYER = "b8:27:eb:a0:a4:01"
 
 
 # Page Definitions
@@ -175,7 +178,7 @@ PAGES_Play = {
     ]
 }
 
-PAGES_Stop = {
+ALERT_Stop = {
   'name':"Stop",
   'pages':
     [
@@ -222,32 +225,42 @@ PAGES_Stop = {
     ]
 }
 
-PAGES_Volume = {
-  'name':"Volume",
-  'pages':
-    [
-      {
-        'name':"Volume",
-        'duration':2,
-        'lines': [
-          {
-            'name':"top",
-            'variables': [ ],
-            'format':"Volume",
-            'justification':"center",
-            'scroll':False
-          },
-          {
-            'name':"bottom",
-            'variables': [ "volume" ],
-            'format':"{0}",
-            'justification':"center",
-            'scroll':False
-          }
-        ]
-      }
+ALERT_Volume = {
+ 	'name':"Volume",
+	'alert': {
+  		'variable': "volume",
+		'type': "change",
+		'coolingperiod': 0
+	},
+	'interruptible':False,
+	'pages': [
+		{
+			'name':"Volume",
+        	'duration':2,
+        	'lines': [
+          		{
+            		'name':"top",
+            		'variables': [ ],
+            		'format':"Volume",
+            		'justification':"center",
+            		'scroll':False
+          		},
+          		{
+            		'name':"bottom",
+            		'variables': [ "volume" ],
+            		'format':"{0}",
+            		'justification':"center",
+            		'scroll':False
+          		}
+        	]
+      	}
     ]
 }
+
+
+
+
+ALERT_LIST = [ ALERT_Volume ]
 
 class RaspDac_Display:
 
@@ -330,7 +343,7 @@ class RaspDac_Display:
 				m_currentsong = self.client.currentsong()
 			except:
 				logging.debug("Could not get status from MPD daemon")
-				return { 'state':u"stop", 'artist':u"", 'title':u"", 'current':0, 'duration':0, 'position':u"", 'bitrate':u"", 'type':u"", 'current_time':u""}
+				return { 'state':u"stop", 'artist':u"", 'title':u"", 'album':u"", 'current':0, 'duration':0, 'position':u"", 'volume':0, 'playlist_position':0, 'playlist_count':0, 'bitrate':u"", 'type':u"" }
 
 		state = m_status.get('state')
 		if state == "play":
@@ -343,6 +356,14 @@ class RaspDac_Display:
 				artist = name
 
 			title = m_currentsong.get('title')
+			album = m_currentsong.get('album')
+			playlist_position = int(state.get('songid'))
+			playlist_count = int(state.get('playlistlength'))
+			volume = int(state.get('volume'))
+			bitrate = state.get('bitrate')
+
+			# Haven't found a way to get the file type from MPD
+			tracktype = u""
 
 			(current, duration) = (m_status.get('time').split(":"))
 
@@ -350,7 +371,11 @@ class RaspDac_Display:
 			# any None's into reasonable values
 			if artist is None: artist = u""
 			if title is None: title = u""
+			if album is None: album = u""
 			if current is None: current = 0
+			if volume is None: volume = 0
+			if bitrate is None: bitrate = u""
+			if tracktype is None: tracktype = u""
 			if duration is None: duration = 0
 
 			# if duration is not available, then suppress its display
@@ -359,9 +384,9 @@ class RaspDac_Display:
 			else:
 				timepos = time.strftime("%M:%S", time.gmtime(int(current)))
 
-			return { 'state':state, 'artist':artist, 'title':title, 'current':current, 'position':timepos, 'duration': duration }
-		else:
-			return { 'state':u"stop", 'artist':u"", 'title':u"", 'current':0, 'duration':0 }
+			return { 'state':u"play", 'artist':artist, 'title':title, 'album':album, 'current':current, 'duration':duration, 'position':timepos, 'volume':volume, 'playlist_position':playlist_position, 'playlist_count':playlist_count, 'bitrate':bitrate, 'type':tracktype }
+	  	else:
+			return { 'state':u"stop", 'artist':u"", 'title':u"", 'album':u"", 'current':0, 'duration':0, 'position':u"", 'volume':0, 'playlist_position':0, 'playlist_count':0, 'bitrate':u"", 'type':u""}
 
 	def status_spop(self):
 		# Try to get status from SPOP daemon
@@ -378,22 +403,34 @@ class RaspDac_Display:
 				spot_status_string = self.spotclient.read_until("\n").strip()
 			except:
 				logging.debug("Could not get status from SPOP daemon")
-				return { 'state':u"stop", 'artist':u"", 'title':u"", 'current':0, 'duration':0, 'position':u"", 'bitrate':u"", 'type':u"", 'current_time':u""}
+				return { 'state':u"stop", 'artist':u"", 'title':u"", 'album':u"", 'current':0, 'duration':0, 'position':u"", 'volume':0, 'playlist_position':0, 'playlist_count':0, 'bitrate':u"", 'type':u""}
 
 		spot_status = json.loads(spot_status_string)
 
 	  	if spot_status.get('status') == "playing":
 			artist = spot_status.get('artist')
 			title = spot_status.get('title')
+			album = spot_status.get('album')
 			current = spot_status.get('position')
 			duration = spot_status.get('duration')
+			playlist_position = spot_status.get('current_track')
+			playlist_count = spot_status.get('total_tracks')
+
+			# SPOP doesn't seem to have bitrate, track type, or volume available
+			bitrate = u""
+			tracktype = u""
+			volume = 0
 
 		  	# since we are returning the info as a JSON formatted return, convert
 		  	# any None's into reasonable values
 
 			if artist is None: artist = u""
 			if title is None: title = u""
+			if album is None: album = u""
 			if current is None: current = 0
+			if volume is None: volume = 0
+			if bitrate is None: bitrate = u""
+			if tracktype is None: tracktype = u""
 			if duration is None:
 				duration = 0
 			else:
@@ -401,16 +438,15 @@ class RaspDac_Display:
 				# Need to adjust to seconds to be consistent with MPD
 				duration = duration / 1000
 
-
 			# if duration is not available, then suppress its display
 			if int(duration) > 0:
 				timepos = time.strftime("%M:%S", time.gmtime(int(current))) + "/" + time.strftime("%M:%S", time.gmtime(int(duration)))
 			else:
 				timepos = time.strftime("%M:%S", time.gmtime(int(current)))
 
-			return { 'state':u"play", 'artist':artist, 'title':title, 'current':current, 'duration': duration, 'position':timepos }
+			return { 'state':u"play", 'artist':artist, 'title':title, 'album':album, 'current':current, 'duration':duration, 'position':timepos, 'volume':volume, 'playlist_position':playlist_position, 'playlist_count':playlist_count, 'bitrate':bitrate, 'type':tracktype }
 	  	else:
-			return { 'state':u"stop", 'artist':u"", 'title':u"", 'current':0, 'duration':0 }
+			return { 'state':u"stop", 'artist':u"", 'title':u"", 'album':u"", 'current':0, 'duration':0, 'position':u"", 'volume':0, 'playlist_position':0, 'playlist_count':0, 'bitrate':u"", 'type':u""}
 
 
 	def status_lms(self):
@@ -476,8 +512,7 @@ class RaspDac_Display:
 			if volume is None: volume = 0
 			if bitrate is None: bitrate = u""
 			if tracktype is None: tracktype = u""
-			if duration is None:
-				duration = 0
+			if duration is None: duration = 0
 
 			# if duration is not available, then suppress its display
 			if int(duration) > 0:
@@ -656,47 +691,110 @@ if __name__ == '__main__':
 
 		current_page_number = -1
 		current_line_number = 0
-		current_state = ""
-		current_volume = 0
 		page_expires = 0
 		hesitation_expires = 0
 		curlines = []
 		hesitate_expires = []
+		alert_mode = False
+
+		# Reset all of the alert message cooling values
+		for pl in ALERT_LIST:
+			pl['cooling_expires'] = 0
+
+		# Initialize previous state
+		prev_state = rd.status()
+
+		# Force the system to recognize the start state as a change
+		prev_state['state'] = ""
 
 		while True:
 			# Get current state of the player
 			cstatus = rd.status()
 			state = cstatus.get('state')
+
+			alert_check = False
+			# Check to see if any alerts are triggered
+			for pl in ALERT_LIST:
+
+
+				# Check to see if alert is in its cooling period
+				if pl['cooling_expires'] < time.time():
+
+					# Use try block to skip page if variables are missing
+					try:
+						# Check to see what type of monitoring to perform
+						if pl['alert']['type'] == "change":
+							if cstatus[pl['alert']['variable']] != prev_state[pl['alert']['variable']]:
+								prev_state[pl['alert']['variable']] = cstatus[pl['alert']['variable']]
+								alert_check = True
+						elif pl['alert']['type'] == "above":
+							if cstatus[pl['alert']['variable']] > pl['alert']['values'][0]:
+								alert_check = True
+						elif pl['alert']['type'] == "below":
+							if cstatus[pl['alert']['variable']] < pl['alert']['values'][0]:
+								alert_check = True
+						elif pl['alert']['type'] == "range":
+							if cstatus[pl['alert']['variable']] > pl['alert']['values'][0] and cstatus[pl['alert']['variable']] < pl['alert']['values'][1]:
+								alert_check = True
+
+						if alert_check:
+							alert_mode = True
+
+							# Set current_pages to the alert page
+							current_pages = pl
+							current_page_number = 0
+							current_line_number = 0
+							page_expires = time.time() + current_pages['pages'][current_page_number]['duration']
+							curlines = []
+							hesitate_expires = []
+
+							# Set cooling expiry time.  If not coolingperiod directive, use default
+							try:
+								pl['cooling_expires'] = time.time() + pl['alert']['coolingperiod']
+							except KeyError:
+								pl['cooling_expires'] = time.time() + COOLING_PERIOD
+
+							# if an alert has been found, break out of the loop
+							# this has the effect of making the order of the list the priority of the messages
+							break
+
+					except (KeyError, AttributeError, IndexError):
+						pass
+
+
+			# Set interruptible value.  If value not present, set to default value of True
 			try:
-				volume = cstatus.get('volume')
-			except:
-				volume = 0
+				# interruptible is only an override until the page expires.  If page expires, allow page updates to continue.
+				if page_expires < time.time():
+					interruptible = True
 
-			# check for player state changed
-			if state != current_state:
-				current_state = state
-				current_page_number = -1
-				current_line_number = 0
-				current_volume = volume
-				page_expires = 0
-				curlines = []
-				hesitate_expires = []
+					# if page just expired on an alert page then force restore to current play state
+					if alert_mode:
+						alert_mode = False
+						prev_state['state'] = ""
+				else:
+					interruptible = current_pages['interruptible']
+			except KeyError:
+				interruptible = True
 
-			# if volume changing briefly override display with volume values
-			if current_volume != volume:
-				current_volume = volume
-				current_pages = PAGES_Volume
+			# check to see if we need to change the display to something new
+			if (alert_mode or state != prev_state['state']) and interruptible:
 				current_page_number = -1
 				current_line_number = 0
 				page_expires = 0
 				curlines = []
 				hesitate_expires = []
-			# else if not playing then display the PAGES_Stop pages
-			elif state != "play":
-				current_pages = PAGES_Stop
-			# else display the PAGES_Playing pages
-			else:
-				current_pages = PAGES_Play
+
+				# if change caused by state change and not alert
+				if alert_mode == False:
+					prev_state['state'] = state
+
+					# Set to new display page
+					if state != "play":
+						current_pages = PAGES_Stop
+					# else display the PAGES_Playing pages
+					else:
+						current_pages = PAGES_Play
 
 			# if page has expired then move to the next page
 			if page_expires < time.time():
@@ -748,14 +846,17 @@ if __name__ == '__main__':
 				try:
 					for j in range(len(current_line['variables'])):
 						try:
-							parms.append(cstatus[current_line['variables'][j]])
+							if type(cstatus[current_line['variables'][j]]) is unicode:
+								parms.append(cstatus[current_line['variables'][j]].encode('utf-8'))
+							else:
+								parms.append(cstatus[current_line['variables'][j]])
 						except KeyError:
 							pass
 				except KeyError:
 					pass
 
 				# create line to display
-				line = format.format(*parms)
+				line = format.format(*parms).decode('utf-8')
 
 				# justify line
 				try:
