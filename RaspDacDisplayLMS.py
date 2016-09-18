@@ -55,25 +55,23 @@ LOGLEVEL=logging.INFO
 
 
 #Configure which music services to monitor
-MPD_ENABLED = False
+MPD_ENABLED = True
 MPD_SERVER = "localhost"
 MPD_PORT = 6600
 
-SPOP_ENABLED = False
+SPOP_ENABLED = True
 SPOP_SERVER = "localhost"
 SPOP_PORT = 6602
 
-LMS_ENABLED = True
-LMS_SERVER = "max2play.local"
+LMS_ENABLED = False
+LMS_SERVER = "localhost"
 LMS_PORT = 9090
 LMS_USER = ""
 LMS_PASSWORD = ""
 
 # Set this to MAC address of the Player you want to monitor.
 # THis should be the MAC of the RaspDac system if using Max2Play with SqueezePlayer
-#LMS_PLAYER = "00:01:02:aa:bb:cc"
-#LMS_PLAYER = "b8:27:eb:c4:25:8c"
-LMS_PLAYER = "b8:27:eb:a0:a4:01"
+LMS_PLAYER = "00:01:02:aa:bb:cc"
 
 
 # Page Definitions
@@ -178,7 +176,7 @@ PAGES_Play = {
     ]
 }
 
-ALERT_Stop = {
+PAGES_Stop = {
   'name':"Stop",
   'pages':
     [
@@ -357,10 +355,10 @@ class RaspDac_Display:
 
 			title = m_currentsong.get('title')
 			album = m_currentsong.get('album')
-			playlist_position = int(state.get('songid'))
-			playlist_count = int(state.get('playlistlength'))
-			volume = int(state.get('volume'))
-			bitrate = state.get('bitrate')
+			playlist_position = int(m_status.get('songid'))
+			playlist_count = int(m_status.get('playlistlength'))
+			volume = int(m_status.get('volume'))
+			bitrate = m_status.get('bitrate')
 
 			# Haven't found a way to get the file type from MPD
 			tracktype = u""
