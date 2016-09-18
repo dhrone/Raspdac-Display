@@ -218,7 +218,9 @@ cd /home/raspdac/Raspdac-Display-master/
 
 ## History
 
-This is version 0.5 and should be considered BETA code.  It (hopefully) solves many of the initialization challenges associated with the Winstar OLED display and implements some nice display scrolling logic based upon the content of the artist and title data supplied by MPD and/or Spotify.
+Version 0.7 (Beta).  This version is a major re-write of the display logic.  It uses a pages metaphor to allow the user to more rapidly change the content of the display.  It also re-integrates customized versions to support RuneAudio, Volumio, and Max2play into a single version.
+
+Version 0.5 (Beta).  This version (hopefully) solves many of the initialization challenges associated with the Winstar OLED display and implements some nice display scrolling logic based upon the content of the artist and title data supplied by MPD and/or Spotify.
 
 ## Credits
 
