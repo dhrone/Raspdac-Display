@@ -9,6 +9,7 @@ PageList consists of...
   An alert directive consists of ...
     The variable to monitor
     The type of monitoring (change, above, below, range)
+    Whether the monitoring of a variable should be ignored if the state of the system changes (e.g. Play -> Stop sets volume to 0)
     An array of values to compare against
     A CoolingPeriod which controls how long the system must wait before displaying the alert again
 
@@ -203,6 +204,7 @@ ALERT_Volume = {
    	'name':"Volume",
   	'alert': {
     		'variable': "volume",
+        'suppressonstatechange':True,
 		    'type': "change",
         'coolingperiod': 0
   	},

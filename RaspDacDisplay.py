@@ -39,8 +39,8 @@ DISPLAY_WIDTH = 16 # the character width of the display
 DISPLAY_HEIGHT = 2 # the number of lines on the display
 
 # This is where the log file will be written
-LOGFILE='/var/log/RaspDacDisplay.log'
-#LOGFILE='./log/RaspDacDisplay.log'
+#LOGFILE='/var/log/RaspDacDisplay.log'
+LOGFILE='./log/RaspDacDisplay.log'
 
 # Adjust this setting to localize the time display to your region
 TIMEZONE="US/Eastern"
@@ -58,11 +58,11 @@ LOGLEVEL=logging.INFO
 # For Volumio and RuneAudio MPD and SPOP should be enabled and LMS disabled
 # for Max2Play if you are using the Logitech Music Service, then LMS should be enabled
 MPD_ENABLED = True
-MPD_SERVER = "localhost"
+MPD_SERVER = "runeaudio.local"
 MPD_PORT = 6600
 
 SPOP_ENABLED = True
-SPOP_SERVER = "localhost"
+SPOP_SERVER = "runeaudio.local"
 SPOP_PORT = 6602
 
 LMS_ENABLED = False
@@ -94,7 +94,7 @@ PAGES_Play = {
             'variables': [ "album" ],
             'format':"Album: {0}",
             'justification':"left",
-            'scroll':True
+            'scroll':False
           },
           {
             'name':"bottom",
@@ -131,7 +131,7 @@ PAGES_Play = {
             'variables': [ "artist" ],
             'format':"Artist: {0}",
             'justification':"left",
-            'scroll':True
+            'scroll':False
           },
           {
             'name':"bottom",
@@ -168,7 +168,7 @@ PAGES_Play = {
             'variables': [ "title" ],
             'format':"Title: {0}",
             'justification':"left",
-            'scroll':True
+            'scroll':False
           },
           {
             'name':"bottom",
@@ -234,6 +234,7 @@ ALERT_Volume = {
 	'alert': {
   		'variable': "volume",
 		'type': "change",
+		'suppressonstatechange':True,
 		'coolingperiod': 0
 	},
 	'interruptible':False,
@@ -727,7 +728,14 @@ if __name__ == '__main__':
 						if pl['alert']['type'] == "change":
 							if cstatus[pl['alert']['variable']] != prev_state[pl['alert']['variable']]:
 								prev_state[pl['alert']['variable']] = cstatus[pl['alert']['variable']]
-								alert_check = True
+								# Some state changes cause variable changes like volume
+								# Check to see if these dependent variable changes
+								# should be suppressed
+								try:
+									if not pl['alert']['suppressonstatechange']:
+										alert_check = True
+								except KeyError:
+									pass
 						elif pl['alert']['type'] == "above":
 							if cstatus[pl['alert']['variable']] > pl['alert']['values'][0]:
 								alert_check = True
@@ -871,15 +879,17 @@ if __name__ == '__main__':
 				lines.append(line)
 
 				# determine whether to scroll or not
+				# if scroll is false, set hesitation time to large value which
+				# effectively shuts off the scroll function
 				if lines[i] != curlines[i]:
 					curlines[i] = lines[i]
 					try:
 						if current_line['scroll']:
 							hesitate_expires[i] = time.time() + HESITATION_TIME
 						else:
-							hesitate_expires[i] = 0
+							hesitate_expires[i] = time.time() + 86400 # Do not scroll
 					except KeyError:
-						hesitate_expires[i] = 0
+						hesitate_expires[i] = time.time() + 86400 # Do not scroll
 
 			# Determine if the display should hesitate before scrolling
 			dispval = []
