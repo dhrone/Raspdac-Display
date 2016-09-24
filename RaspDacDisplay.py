@@ -190,7 +190,7 @@ PAGES_Stop = {
     [
       {
         'name':"Ready",
-        'duration':10,
+        'duration':12,
         'lines': [
           {
             'name':"top",
@@ -230,14 +230,14 @@ PAGES_Stop = {
       },
       {
         'name':"SYSTEMVARS",
-        'duration':6,
+        'duration':10,
         'lines': [
           {
             'name':"top",
             'variables': [ "current_tempc", "disk_availp" ],
             'format':"Temp: {0}c / Disk {1}% full",
             'justification':"left",
-            'scroll':False
+            'scroll':True
           },
           {
             'name':"bottom",
@@ -640,10 +640,10 @@ class RaspDac_Display:
 				self.tempc = int(file.read())
 
 				# Convert value to float and correct decimal place
-				self.tempc = float(self.tempc) / 1000
+				self.tempc = round(float(self.tempc) / 1000,1)
 
 				# convert to fahrenheit
-				self.tempf = self.tempc*9/5+32
+				self.tempf = round(self.tempc*9/5+32,1)
 
 				file.close()
 			except IOError:
