@@ -640,10 +640,10 @@ class RaspDac_Display:
 				self.tempc = int(file.read())
 
 				# Convert value to float and correct decimal place
-				self.tempc = float(tempc) / 1000
+				self.tempc = float(self.tempc) / 1000
 
 				# convert to fahrenheit
-				self.tempf = tempc*9/5+32
+				self.tempf = self.tempc*9/5+32
 
 				file.close()
 			except IOError:
@@ -664,10 +664,10 @@ class RaspDac_Display:
 				self.avail = line[0:line.find("   ")]
 				self.availp = line[line.fine("   ")+3:]
 				# remove % sign
-				self.availp = availp[0:len(availp)-1]
+				self.availp = self.availp[0:len(self.availp)-1]
 
-				self.avail = int(avail)
-				self.availp = int(availp)
+				self.avail = int(self.avail)
+				self.availp = int(self.availp)
 
 				p.close()
 			except IOError:
