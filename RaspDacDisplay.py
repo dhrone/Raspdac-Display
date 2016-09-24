@@ -95,7 +95,7 @@ PAGES_Play = {
             'variables': [ "album" ],
             'format':"Album: {0}",
             'justification':"left",
-            'scroll':False
+            'scroll':True
           },
           {
             'name':"bottom",
@@ -132,7 +132,7 @@ PAGES_Play = {
             'variables': [ "artist" ],
             'format':"Artist: {0}",
             'justification':"left",
-            'scroll':False
+            'scroll':True
           },
           {
             'name':"bottom",
@@ -169,7 +169,7 @@ PAGES_Play = {
             'variables': [ "title" ],
             'format':"Title: {0}",
             'justification':"left",
-            'scroll':False
+            'scroll':True
           },
           {
             'name':"bottom",
