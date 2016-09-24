@@ -225,17 +225,16 @@ Follow the instructions found at https://www.max2play.com/en/getting-started/
 
 The following steps require that your Raspdac be powered up and connected to your network
 
-Using a browser, navigate to http://max2play.local.  This should bring up the Max2Play interface on the HiFiBerry tab.  
-Choose Hifi Berry DAC (Pi A/B) as your installed HiFiBerry Card and click save.
-Click on the Settings/Reboot tab to switch to that page.
-Click on Expand Filesystem to enable the full use of the storage on your SD card.  (You may need to reboot at this point).
-Click on Update Max2Play to bring the software up to the current version.
-Click on the Squeezebox Server tab to change to that page.
-Click on Show available Versions to populate the list of available Squeezebox Server versions.
-Choose the Nightly 7.9 build.  Make sure that the text in the Alternate source field references the 7.9 version.  If not, reselect 7.9 in the dropdown.
-Click on Squeezebox Server start installation button
-When the installation is complete, you can click on Open Squeezebox Server Wedadministration to load the Logitech Media Server (LMS) interface. From there you can set up your music sources and play music.  Instructions for setting up Spotify are available at https://www.max2play.com/en/how-tos/howto-spotify/.  It is also possible to use Pandora, Tidal and other 3rd party music providers though this will require you to set up an account on mysqueezebox.com, link your LMS to mysqueezebox.com (settings->mysqueezebox.com) and add the apps of your choice on that site.  Once you have done this, the new services will be available under "My Apps" in the LMS web interface.
-
+   * Using a browser, navigate to http://max2play.local.  This should bring up the Max2Play interface on the HiFiBerry tab.  
+   * Choose Hifi Berry DAC (Pi A/B) as your installed HiFiBerry Card and click save.
+   * Click on the Settings/Reboot tab to switch to that page.
+   * Click on Expand Filesystem to enable the full use of the storage on your SD card.  (You may need to reboot at this point).
+   * Click on Update Max2Play to bring the software up to the current version.
+   * Click on the Squeezebox Server tab to change to that page.
+   * Click on Show available Versions to populate the list of available Squeezebox Server versions.
+   * Choose the Nightly 7.9 build.  Make sure that the text in the Alternate source field references the 7.9 version.  If not, reselect 7.9 in the dropdown.
+   * Click on Squeezebox Server start installation button
+   When the installation is complete, you can click on Open Squeezebox Server Wedadministration to load the Logitech Media Server (LMS) interface. From there you can set up your music sources and play music.  Instructions for setting up Spotify are available at https://www.max2play.com/en/how-tos/howto-spotify/.  It is also possible to use Pandora, Tidal and other 3rd party music providers though this will require you to set up an account on mysqueezebox.com, link your LMS to mysqueezebox.com (settings->mysqueezebox.com) and add the apps of your choice on that site.  Once you have done this, the new services will be available under "My Apps" in the LMS web interface.
 
 * Step two.  Log into the max2play console using ssh.  You can use whatever ssh client you are comfortable with.  The username is pi and the password is raspberry.
 
