@@ -330,6 +330,12 @@ class RaspDac_Display:
 		self.tempreadexpired = 0
 		self.diskreadexpired = 0
 
+		self.tempc = 0.0
+		self.tempf = 0.0
+		self.avail = 0
+		self.availp = 0
+
+
 		# Initilize the connections to the music Daemons.  Currently supporting
 		# MPD and SPOP (for Spotify)
 
@@ -631,22 +637,22 @@ class RaspDac_Display:
 			self.tempreadexpired = time.time()+20
 			try:
 				file = open("/sys/class/thermal/thermal_zone0/temp")
-				tempc = int(file.read())
+				self.tempc = int(file.read())
 
 				# Convert value to float and correct decimal place
-				tempc = float(tempc) / 1000
+				self.tempc = float(tempc) / 1000
 
 				# convert to fahrenheit
-				tempf = tempc*9/5+32
+				self.tempf = tempc*9/5+32
 
 				file.close()
 			except IOError:
-				tempc = 0.0
-				tempf = 0.0
+				self.tempc = 0.0
+				self.tempf = 0.0
 			except AttributeError:
 				file.close()
-				tempc = 0.0
-				tempf = 0.0
+				self.tempc = 0.0
+				self.tempf = 0.0
 
 		# Read available disk space remaining every 20 seconds
 		if self.diskreadexpired < time.time():
@@ -655,28 +661,28 @@ class RaspDac_Display:
 				p = os.popen("df --output='avail','pcent' /")
 				line = p.readline()
 				line = p.readline().strip()
-				avail = line[0:line.find("   ")]
-				availp = line[line.fine("   ")+3:]
+				self.avail = line[0:line.find("   ")]
+				self.availp = line[line.fine("   ")+3:]
 				# remove % sign
-				availp = availp[0:len(availp)-1]
+				self.availp = availp[0:len(availp)-1]
 
-				avail = int(avail)
-				availp = int(availp)
+				self.avail = int(avail)
+				self.availp = int(availp)
 
 				p.close()
 			except IOError:
-				avail = 0
-				availp = 0
+				self.avail = 0
+				self.availp = 0
 			except AttributeError:
 				p.close()
-				avail = 0
-				availp = 0
+				self.avail = 0
+				self.availp = 0
 
 
-		status['current_tempc'] = tempc
-		status['current_tempf'] = tempf
-		status['disk_avail'] = avail
-		status['disk_availp'] = availp
+		status['current_tempc'] = self.tempc
+		status['current_tempf'] = self.tempf
+		status['disk_avail'] = self.avail
+		status['disk_availp'] = self.availp
 		status['current_time'] = current_time
 		status['current_ip'] = current_ip
 
