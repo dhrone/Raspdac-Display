@@ -39,8 +39,8 @@ DISPLAY_WIDTH = 16 # the character width of the display
 DISPLAY_HEIGHT = 2 # the number of lines on the display
 
 # This is where the log file will be written
-#LOGFILE='/var/log/RaspDacDisplay.log'
-LOGFILE='./log/RaspDacDisplay.log'
+LOGFILE='/var/log/RaspDacDisplay.log'
+#LOGFILE='./log/RaspDacDisplay.log'
 
 # Adjust this setting to localize the time display to your region
 TIMEZONE="US/Eastern"
@@ -58,11 +58,11 @@ LOGLEVEL=logging.INFO
 # For Volumio and RuneAudio MPD and SPOP should be enabled and LMS disabled
 # for Max2Play if you are using the Logitech Music Service, then LMS should be enabled
 MPD_ENABLED = True
-MPD_SERVER = "runeaudio.local"
+MPD_SERVER = "localhost"
 MPD_PORT = 6600
 
 SPOP_ENABLED = True
-SPOP_SERVER = "runeaudio.local"
+SPOP_SERVER = "localhost"
 SPOP_PORT = 6602
 
 LMS_ENABLED = False
@@ -81,6 +81,7 @@ LMS_PLAYER = "00:01:02:aa:bb:cc"
 
 
 # Page Definitions
+# See Page Format.txt for instructions and examples on how to modify your display settings
 PAGES_Play = {
   'name':"Play",
   'pages':
