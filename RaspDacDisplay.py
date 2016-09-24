@@ -226,6 +226,26 @@ PAGES_Stop = {
             'scroll':False
           }
         ]
+      },
+      {
+        'name':"SYSTEMVARS",
+        'duration':6,
+        'lines': [
+          {
+            'name':"top",
+            'variables': [ "current_tempc", "disk_availp" ],
+            'format':"Temp: {0}c / Disk {1}% full",
+            'justification':"left",
+            'scroll':False
+          },
+          {
+            'name':"bottom",
+            'variables': [ "current_time" ],
+            'format':"{0}",
+            'justification':"center",
+            'scroll':False
+          }
+        ]
       }
     ]
 }
@@ -263,7 +283,42 @@ ALERT_Volume = {
     ]
 }
 
-ALERT_LIST = [ ALERT_Volume ]
+ALERT_TempTooHigh = {
+ 	'name':"TempTooHigh",
+	'alert': {
+  		'variable': "current_tempc",
+		'type': "above",
+		'values': [ 85 ],
+		'suppressonstatechange':False,
+		'coolingperiod': 20
+	},
+	'interruptible':False,
+	'pages': [
+		{
+			'name':"TempTooHigh",
+        	'duration':8,
+        	'lines': [
+          		{
+            		'name':"top",
+            		'variables': [ ],
+            		'format':"Temp Too High",
+            		'justification':"center",
+            		'scroll':False
+          		},
+          		{
+            		'name':"bottom",
+            		'variables': [ "current_tempc" ],
+            		'format':"Temp: {0}c",
+            		'justification':"center",
+            		'scroll':False
+          		}
+        	]
+      	}
+    ]
+}
+
+
+ALERT_LIST = [ ALERT_Volume, ALERT_TempTooHigh ]
 
 class RaspDac_Display:
 
@@ -566,6 +621,53 @@ class RaspDac_Display:
 
 		current_ip = commands.getoutput("ip -4 route get 1 | head -1 | cut -d' ' -f8 | tr -d '\n'").strip()
 
+		# Read Temperature from Pi's on-board temperature sensor
+		try:
+			file = open("/sys/class/thermal/thermal_zone0/temp")
+			tempc = int(file.read())
+
+			# Convert value to float and correct decimal place
+			tempc = float(tempc) / 1000
+
+			# convert to fahrenheit
+			tempf = tempc*9/5+32
+
+			file.close()
+		except IOError:
+			tempc = 0.0
+			tempf = 0.0
+		except AttributeError:
+			file.close()
+			tempc = 0.0
+			tempf = 0.0
+
+		# Read available disk space remaining
+		try:
+			p = os.popen("df --output='avail','pcent' /")
+			line = p.readline()
+			line = p.readline().strip()
+			avail = line[0:line.find("   ")]
+			availp = line[line.fine("   ")+3:]
+			# remove % sign
+			availp = availp[0:len(availp)-1]
+
+			avail = int(avail)
+			availp = int(availp)
+
+			p.close()
+		except IOError:
+			avail = 0
+			availp = 0
+		except AttributeError:
+			p.close()
+			avail = 0
+			availp = 0
+
+
+		status['current_tempc'] = tempc
+		status['current_tempf'] = tempf
+		status['disk_avail'] = avail
+		status['disk_availp'] = availp
 		status['current_time'] = current_time
 		status['current_ip'] = current_ip
 

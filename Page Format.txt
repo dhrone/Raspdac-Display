@@ -43,6 +43,10 @@ The variable values that you use within your PageLists must be returned by the s
   'playlist_count' - The number of tracks currently in the play list
   'bitrate' - The bitrate of the current track
   'type' - The encoding type of the current track (e.g. FLAC, MP3)
+  'current_tempc' - Current system temperature in celsius
+  'current_tempf' - Current system temperature in fahrenheit
+  'disk_avail' - Amount of bytes current left on root partition
+  'disk_availp' - Percentage of disk used on root partition
   'current_time' - The current local time (assuming TIMEZONE is set correctly)
   'current_ip' - The current IP address of the system
 
