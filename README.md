@@ -214,7 +214,130 @@ cd /home/raspdac/Raspdac-Display-master/
       * There is now a more flexible system in place to configure what gets displayed on the screen.  It uses a metaphor of a collection of pages that are displayed for each of the major modes of the system (stop, play, alert).  A more complete description of how to modify and create pages is included in the "Page Format.txt" file.  
       * Note that ARTIST_TIME, and TITLE_TIME have been removed.  This functionality is now captured in the PAGES system
 
+### For Max2Play
+These instructions assume you are using a newly created image of the Max2Play distribution (v2.36) and that the Winstar OLED display has been wired to the Raspberry Pi 2 or Pi 3 according to the instructions provided by Audiophonics at http://forum.audiophonics.fr/viewtopic.php?f=4&t=1492.  If you have wired the display to different pins, please make sure to adjust the GPIO pin assignments accordingly.  Note: pin assignments for the V2 and V3 versions of the RaspDac are already encoded at the top of the Winstar_GraphicOLED.py file.
 
+Note: Max2Play supports multiple playback systems.  Currently RaspdacDisplay is only tested to work with the Logitech Media Server method using the SqueezeLite Audioplayer.
+
+
+* Step one.  Download and install the Max2Play HiFiBerry Image (Raspberry Pi) image on your SD card.  
+Follow the instructions found at https://www.max2play.com/en/getting-started/
+
+The following steps require that your Raspdac be powered up and connected to your network
+
+Using a browser, navigate to http://max2play.local.  This should bring up the Max2Play interface on the HiFiBerry tab.  
+Choose Hifi Berry DAC (Pi A/B) as your installed HiFiBerry Card and click save.
+Click on the Settings/Reboot tab to switch to that page.
+Click on Expand Filesystem to enable the full use of the storage on your SD card.  (You may need to reboot at this point).
+Click on Update Max2Play to bring the software up to the current version.
+Click on the Squeezebox Server tab to change to that page.
+Click on Show available Versions to populate the list of available Squeezebox Server versions.
+Choose the Nightly 7.9 build.  Make sure that the text in the Alternate source field references the 7.9 version.  If not, reselect 7.9 in the dropdown.
+Click on Squeezebox Server start installation button
+When the installation is complete, you can click on Open Squeezebox Server Wedadministration to load the Logitech Media Server (LMS) interface. From there you can set up your music sources and play music.  Instructions for setting up Spotify are available at https://www.max2play.com/en/how-tos/howto-spotify/.  It is also possible to use Pandora, Tidal and other 3rd party music providers though this will require you to set up an account on mysqueezebox.com, link your LMS to mysqueezebox.com (settings->mysqueezebox.com) and add the apps of your choice on that site.  Once you have done this, the new services will be available under "My Apps" in the LMS web interface.
+
+
+* Step two.  Log into the max2play console using ssh.  You can use whatever ssh client you are comfortable with.  The username is pi and the password is raspberry.
+
+* Step three.  Download the latest Raspdac-Display software.
+
+   ```
+   git clone https://github.com/dhrone/Raspdac-Display
+   cd Raspdac-Display
+   git checkout working
+   ```
+
+
+* Step four.  Add the necessary packages to support the RaspDac-Display program
+
+  ```
+  sudo apt-get install python-setuptools
+  sudo pip install moment
+  sudo pip install pylms
+  sudo pip install python-mpd2
+  ```
+
+* Step five.  Edit the RaspdacDisplay.py to localize it for your system. You can use whatever editor you are comfortable with (e.g. vi, nano)
+
+Find and change the following values to ones appropriate for your system.
+```
+TIMEZONE
+MPD_ENABLED (should be false for Max2Play)
+SPOP_ENABLED (should be false for Max2Play)
+LMS_ENABLED (should be True for Max2Play)
+LMS_PLAYER (set this to the MAC address for your Max2Play system).
+```
+
+To find the MAC address for your system, use the following command...
+
+```
+ifconfig -a | grep HWaddr
+```
+
+If you are using a wired network, choose the HWaddr from the eth0 interface.
+If you are using a wireless network, choose the HWaddr from the wlan0 interface.
+
+* Step six.  Edit the Winstar_GraphicOLED.py file and change the pin settings for the version of the Raspdac that you have.
+
+```
+# Pin Mappings V2
+#OLED_DB4=25
+#OLED_DB5=24
+#OLED_DB6=23
+#OLED_DB7=15
+#OLED_RS=7
+#OLED_E=8
+
+# Pin Mappings V3
+OLED_DB4=25
+OLED_DB5=24
+OLED_DB6=23
+OLED_DB7=27
+OLED_RS=7
+OLED_E=8
+```
+
+This is important to get right as if the pins are wrong, the display will not work correctly.  The screen will likely remain blank or show random characters if you do not have the pins set correctly for the version of the Raspdac DAC you are using.
+
+* Step seven.  Place files in their appropriate directories and register the service with systemctl to enable autostart.  All of these commands should be issued from within the Raspdac_Display directory that you retrieved from github.
+
+  * A. Files for the display
+  ```
+  sudo cp oled.service /etc/systemd/system/
+  sudo cp RaspdacDisplay.py /usr/local/bin/
+  sudo cp Winstar_GraphicOLED.py /usr/local/bin/
+  sudo systemctl enable oled.service
+  ```
+
+  * B. Files for the power management function (RaspDac version V3 only)
+
+  ```
+  sudo cp sds.service /etc/systemd/system/
+  sudo cp sdsmax.sh /usr/local/bin/
+  chmod +x /usr/local/bin/sdsmax.sh
+  systemctl enable sds.service
+  ```
+
+
+ * Step eight.  Reboot (and enjoy) !!!
+   ```
+   reboot
+   ```
+
+ * Additional instructions:
+   * RaspDacDisplay.py uses the variable LOGFILE to determine where to place it's log file.  The default is /var/log/RaspDacDisplay.log.
+   * There are several variables you can adjust at the beginning of RaspDacDisplay.py to modify the software for different behavior.  These are...
+     * HESITATION_TIME - Titles or artists which are wider than the display width get scrolled.  This variable sets how long the display should pause in seconds before the scrolling begins
+     * ANIMATION_SMOOTHING - Sets the speed the upper speed for display update.  Values between .1 and .25 seem to work well.
+     * TIMEZONE - Sets what timezone should be used when displaying the current system time.  Possible values can be found in the /usr/share/zoneinfo directory. Examples...
+      ```
+      New York City.  TIMEZONE="US/Eastern"
+      San Francisco.  TIMEZONE="US/Pacific"
+      Paris.  TIMEZONE = "Europe/Paris"
+      ```
+    * PAGES System:
+      * There is now a more flexible system in place to configure what gets displayed on the screen.  It uses a metaphor of a collection of pages that are displayed for each of the major modes of the system (stop, play, alert).  A more complete description of how to modify and create pages is included in the "Page Format.txt" file.  
+      * Note that ARTIST_TIME, and TITLE_TIME have been removed.  This functionality is now captured in the PAGES system
 
 ## History
 
