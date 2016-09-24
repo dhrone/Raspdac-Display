@@ -4,6 +4,7 @@ import time
 import json
 import logging
 import commands
+import os
 from mpd import MPDClient
 import pylms
 from pylms import server
@@ -326,6 +327,9 @@ class RaspDac_Display:
 	def __init__(self):
 		logging.info("RaspDac_Display Initializing")
 
+		self.tempreadexpired = 0
+		self.diskreadexpired = 0
+
 		# Initilize the connections to the music Daemons.  Currently supporting
 		# MPD and SPOP (for Spotify)
 
@@ -621,47 +625,52 @@ class RaspDac_Display:
 
 		current_ip = commands.getoutput("ip -4 route get 1 | head -1 | cut -d' ' -f8 | tr -d '\n'").strip()
 
-		# Read Temperature from Pi's on-board temperature sensor
-		try:
-			file = open("/sys/class/thermal/thermal_zone0/temp")
-			tempc = int(file.read())
 
-			# Convert value to float and correct decimal place
-			tempc = float(tempc) / 1000
+		# Read Temperature from Pi's on-board temperature sensor once every 20 seconds
+		if self.tempreadexpired < time.time():
+			self.tempreadexpired = time.time()+20
+			try:
+				file = open("/sys/class/thermal/thermal_zone0/temp")
+				tempc = int(file.read())
 
-			# convert to fahrenheit
-			tempf = tempc*9/5+32
+				# Convert value to float and correct decimal place
+				tempc = float(tempc) / 1000
 
-			file.close()
-		except IOError:
-			tempc = 0.0
-			tempf = 0.0
-		except AttributeError:
-			file.close()
-			tempc = 0.0
-			tempf = 0.0
+				# convert to fahrenheit
+				tempf = tempc*9/5+32
 
-		# Read available disk space remaining
-		try:
-			p = os.popen("df --output='avail','pcent' /")
-			line = p.readline()
-			line = p.readline().strip()
-			avail = line[0:line.find("   ")]
-			availp = line[line.fine("   ")+3:]
-			# remove % sign
-			availp = availp[0:len(availp)-1]
+				file.close()
+			except IOError:
+				tempc = 0.0
+				tempf = 0.0
+			except AttributeError:
+				file.close()
+				tempc = 0.0
+				tempf = 0.0
 
-			avail = int(avail)
-			availp = int(availp)
+		# Read available disk space remaining every 20 seconds
+		if self.diskreadexpired < time.time()
+			self.diskreadexpired = time.time() + 20
+			try:
+				p = os.popen("df --output='avail','pcent' /")
+				line = p.readline()
+				line = p.readline().strip()
+				avail = line[0:line.find("   ")]
+				availp = line[line.fine("   ")+3:]
+				# remove % sign
+				availp = availp[0:len(availp)-1]
 
-			p.close()
-		except IOError:
-			avail = 0
-			availp = 0
-		except AttributeError:
-			p.close()
-			avail = 0
-			availp = 0
+				avail = int(avail)
+				availp = int(availp)
+
+				p.close()
+			except IOError:
+				avail = 0
+				availp = 0
+			except AttributeError:
+				p.close()
+				avail = 0
+				availp = 0
 
 
 		status['current_tempc'] = tempc
