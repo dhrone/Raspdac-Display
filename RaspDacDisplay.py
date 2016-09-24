@@ -649,7 +649,7 @@ class RaspDac_Display:
 				tempf = 0.0
 
 		# Read available disk space remaining every 20 seconds
-		if self.diskreadexpired < time.time()
+		if self.diskreadexpired < time.time():
 			self.diskreadexpired = time.time() + 20
 			try:
 				p = os.popen("df --output='avail','pcent' /")
