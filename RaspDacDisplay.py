@@ -856,7 +856,7 @@ if __name__ == '__main__':
 								# Check to see if these dependent variable changes
 								# should be suppressed
 								try:
-									if not pl['alert']['suppressonstatechange']:
+									if prev_state['state'] == state or not pl['alert']['suppressonstatechange']:
 										alert_check = True
 								except KeyError:
 									pass
