@@ -90,6 +90,8 @@ PAGES_Play = {
       {
         'name':"Album",
         'duration':10,
+		'hidewhenempty':True,
+        'hidewhenemptyvars': [ "album" ],
         'lines': [
           {
             'name':"top",
@@ -127,6 +129,8 @@ PAGES_Play = {
       {
         'name':"Artist",
         'duration':10,
+		'hidewhenempty':True,
+        'hidewhenemptyvars': [ "artist" ],
         'lines': [
           {
             'name':"top",
@@ -164,6 +168,8 @@ PAGES_Play = {
       {
         'name':"Title",
         'duration':10,
+		'hidewhenempty':True,
+        'hidewhenemptyvars': [ "title" ],
         'lines': [
           {
             'name':"top",
@@ -925,13 +931,54 @@ if __name__ == '__main__':
 
 			# if page has expired then move to the next page
 			if page_expires < time.time():
-				current_page_number = current_page_number + 1
 
-				# if on last page, return to first page
-				if current_page_number > len(current_pages['pages'])-1:
-					current_page_number = 0
+				# Move to next page and check to see if it should be displayed or hidden
+				for i in range(len(current_pages['pages'])):
+					current_page_number = current_page_number + 1
 
-				page_expires = time.time() + current_pages['pages'][current_page_number]['duration']
+					# if on last page, return to first page
+					if current_page_number > len(current_pages['pages'])-1:
+						current_page_number = 0
+
+					page_expires = time.time() + current_pages['pages'][current_page_number]['duration']
+
+					cp = current_pages['pages'][current_page_number]
+
+					try:
+						hwe = cp['hidewhenempty']
+					except KeyError:
+						hwe = False
+
+					if hwe:
+						allempty = True
+						try:
+							hvars = cp['hidewhenemptyvars']
+						except KeyError:
+							hvars = [ ]
+
+						for v in hvars:
+
+							try:
+								# if the variable is a string
+								if type(cstatus[v]) is unicode:
+									# and it is not empty, then set allempty False and exit loop
+									if len(cstatus[v]) > 0:
+										allempty = False
+										break
+								else:
+									# All other variable types are considered not empty
+									allempty = False
+									break
+							except KeyError:
+								# if the variable is not in cstatus consider it empty
+								pass
+						if not allempty:
+							break
+					else:
+						# If not hidewhenempty then exit loop
+						break
+
+
 
 			# Set current_page
 			current_page = current_pages['pages'][current_page_number]
