@@ -9,7 +9,15 @@ The RaspDac is a Raspberry Pi audio player using a Sabre ES9023 DAC and capable 
 
    These instructions assume a working version of the Volumio distribution (V1.55) and that the Winstar OLED display has been wired to the Raspberry Pi according to the instructions provided by Audiophonics at http://forum.audiophonics.fr/viewtopic.php?f=4&t=1492.  If you have wired the display to different pins, please make sure to adjust the GPIO pin assignments accordingly. Note: pin assignments for the V2 and V3 versions of the RaspDac are already encoded at the top of the Winstar_GraphicOLED.py file.
 
-   Place RaspDacDisplay.py and WinstarOled.py in a directory of your choice (e.g. /home/pi).  Add RaspDacDisplay.py to /etc/rc.local to automate its startup on reboot.  It is a good idea to delay its start-up to allow the system to come up completely before it attempts to start.  The following examples uses a 20 second delay.
+  Retrieve the current version of the RaspDac_Display software from github
+
+   ```
+   git clone https://github.com/dhrone/Raspdac-Display
+   cd Raspdac-Display
+   git checkout working
+   ```
+
+   Place RaspDacDisplay.py and WinstarOled.py in a directory of your choice (e.g. /usr/local/bin/.  Add RaspDacDisplay.py to /etc/rc.local to automate its startup on reboot.  It is a good idea to delay its start-up to allow the system to come up completely before it attempts to start.  The following examples uses a 20 second delay.
 
    ```
    /etc/rc.local
@@ -27,7 +35,7 @@ The RaspDac is a Raspberry Pi audio player using a Sabre ES9023 DAC and capable 
    # By default this script does nothing.
    /var/www/command/player_wdog.sh startup & > /dev/null 2>&1
 
-   (sleep 20; python /home/pi/RaspDacDisplay.py) &
+   (sleep 20; python /usr/local/bin/RaspDacDisplay.py) &
    exit 0
    ```
 
@@ -167,13 +175,13 @@ Follow the instructions found at http://www.runeaudio.com/documentation/troubles
   ```
 
 * Step six.  Retrieve the current version of the RaspDac_Display software from github
+
 ```
-mkdir /home/raspdac
-cd /home/raspdac
-wget https://github.com/dhrone/Raspdac-Display/archive/master.tar.gz
-tar xvf master.tar.gz
-cd /home/raspdac/Raspdac-Display-master/
+git clone https://github.com/dhrone/Raspdac-Display
+cd Raspdac-Display
+git checkout working
 ```
+
 * Step seven.  Place files in their appropriate directories and register the service with systemctl to enable autostart.  All of these commands should be issued from within the Raspdac_Display directory that you retrieved from github.
    * A.  Files for the display
      ```
@@ -236,7 +244,7 @@ The following steps require that your Raspdac be powered up and connected to you
    * Click on Squeezebox Server start installation button
    When the installation is complete, you can click on Open Squeezebox Server Wedadministration to load the Logitech Media Server (LMS) interface. From there you can set up your music sources and play music.  Instructions for setting up Spotify are available at https://www.max2play.com/en/how-tos/howto-spotify/.  It is also possible to use Pandora, Tidal and other 3rd party music providers though this will require you to set up an account on mysqueezebox.com, link your LMS to mysqueezebox.com (settings->mysqueezebox.com) and add the apps of your choice on that site.  Once you have done this, the new services will be available under "My Apps" in the LMS web interface.
 
-* Step two.  Log into the max2play console using ssh.  You can use whatever ssh client you are comfortable with.  The username is pi and the password is raspberry.
+* Step two.  Log into the max2play console using ssh.  You can use whatever ssh client you are comfortable with.  The username is pi and the password is raspberry.  Unless you've changed it the URL should be max2play.local.  Ex: "ssh pi@max2play.local".
 
 * Step three.  Download the latest Raspdac-Display software.
 
@@ -261,10 +269,10 @@ The following steps require that your Raspdac be powered up and connected to you
 Find and change the following values to ones appropriate for your system.
 ```
 TIMEZONE
-MPD_ENABLED (should be false for Max2Play)
-SPOP_ENABLED (should be false for Max2Play)
-LMS_ENABLED (should be True for Max2Play)
-LMS_PLAYER (set this to the MAC address for your Max2Play system).
+MPD_ENABLED (should be false if using LMS)
+SPOP_ENABLED (should be false if using LMS)
+LMS_ENABLED (should be True if using LMS)
+LMS_PLAYER (set this to the MAC address for your Max2Play system if using SqueezeLite).
 ```
 
 To find the MAC address for your system, use the following command...
