@@ -297,7 +297,7 @@ ALERT_TempTooHigh = {
 		'type': "above",
 		'values': [ 85 ],
 		'suppressonstatechange':False,
-		'coolingperiod': 20
+		'coolingperiod': 30
 	},
 	'interruptible':False,
 	'pages': [
@@ -668,7 +668,7 @@ class RaspDac_Display:
 				line = p.readline()
 				line = p.readline().strip()
 				self.avail = line[0:line.find("   ")]
-				self.availp = line[line.fine("   ")+3:]
+				self.availp = line[line.find("   ")+3:]
 				# remove % sign
 				self.availp = self.availp[0:len(self.availp)-1]
 
