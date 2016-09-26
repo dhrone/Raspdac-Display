@@ -335,6 +335,7 @@ class RaspDac_Display:
 
 		self.tempreadexpired = 0
 		self.diskreadexpired = 0
+		self.bitratereadexpired = 0
 
 		self.tempc = 0.0
 		self.tempf = 0.0
@@ -434,7 +435,10 @@ class RaspDac_Display:
 			playlist_position = int(m_status.get('songid'))
 			playlist_count = int(m_status.get('playlistlength'))
 			volume = int(m_status.get('volume'))
-			bitrate = m_status.get('bitrate')
+			
+			# Limit reads to every 20 seconds to prevent the display from constantly updating if the bit rate is variable
+			if self.bitratereadexpired < time.time()
+				self.bitratereadexpired = time.time() + 20				bitrate = m_status.get('bitrate')
 
 			# Haven't found a way to get the file type from MPD
 			tracktype = u""
@@ -566,10 +570,14 @@ class RaspDac_Display:
 			url = self.lmsplayer.get_track_path()
 
 			# Get bitrate and tracktype if they are available.  Try blocks used to prevent array out of bounds exception if values are not found
-			try:
-				bitrate = urllib.unquote(str(self.lmsplayer.request("songinfo 2 1 url:"+url+" tags:r", True))).decode('utf-8').split("bitrate:", 1)[1]
-			except:
-				bitrate = u""
+			
+			# Limit reads to every 20 seconds to prevent the display from constantly updating if the bit rate is variable
+			if self.bitratereadexpired < time.time()
+				self.bitratereadexpired = time.time() + 20
+				try:
+					bitrate = urllib.unquote(str(self.lmsplayer.request("songinfo 2 1 url:"+url+" tags:r", True))).decode('utf-8').split("bitrate:", 1)[1]
+				except:
+					bitrate = u""
 
 			try:
 				tracktype = urllib.unquote(str(self.lmsplayer.request("songinfo 2 1 url:"+url+" tags:o", True))).decode('utf-8').split("type:",1)[1]
@@ -931,6 +939,9 @@ if __name__ == '__main__':
 
 			# if page has expired then move to the next page
 			if page_expires < time.time():
+			
+				# make sure that bitrate read gets performed before next page view
+				self.bitratereadexpired = 0
 
 				# Move to next page and check to see if it should be displayed or hidden
 				for i in range(len(current_pages['pages'])):
