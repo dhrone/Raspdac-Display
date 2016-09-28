@@ -341,6 +341,7 @@ class RaspDac_Display:
 		self.tempf = 0.0
 		self.avail = 0
 		self.availp = 0
+		self.bitrate = 0
 
 
 		# Initilize the connections to the music Daemons.  Currently supporting
@@ -437,8 +438,9 @@ class RaspDac_Display:
 			volume = int(m_status.get('volume'))
 			
 			# Limit reads to every 20 seconds to prevent the display from constantly updating if the bit rate is variable
-			if self.bitratereadexpired < time.time()
-				self.bitratereadexpired = time.time() + 20				bitrate = m_status.get('bitrate')
+			if self.bitratereadexpired < time.time():
+				self.bitratereadexpired = time.time() + 20
+				self.bitrate = m_status.get('bitrate')
 
 			# Haven't found a way to get the file type from MPD
 			tracktype = u""
@@ -452,7 +454,7 @@ class RaspDac_Display:
 			if album is None: album = u""
 			if current is None: current = 0
 			if volume is None: volume = 0
-			if bitrate is None: bitrate = u""
+			if self.bitrate is None: self.bitrate = u""
 			if tracktype is None: tracktype = u""
 			if duration is None: duration = 0
 
@@ -462,7 +464,7 @@ class RaspDac_Display:
 			else:
 				timepos = time.strftime("%M:%S", time.gmtime(int(current)))
 
-			return { 'state':u"play", 'artist':artist, 'title':title, 'album':album, 'current':current, 'duration':duration, 'position':timepos, 'volume':volume, 'playlist_position':playlist_position, 'playlist_count':playlist_count, 'bitrate':bitrate, 'type':tracktype }
+			return { 'state':u"play", 'artist':artist, 'title':title, 'album':album, 'current':current, 'duration':duration, 'position':timepos, 'volume':volume, 'playlist_position':playlist_position, 'playlist_count':playlist_count, 'bitrate':self.bitrate, 'type':tracktype }
 	  	else:
 			return { 'state':u"stop", 'artist':u"", 'title':u"", 'album':u"", 'current':0, 'duration':0, 'position':u"", 'volume':0, 'playlist_position':0, 'playlist_count':0, 'bitrate':u"", 'type':u""}
 
@@ -572,12 +574,12 @@ class RaspDac_Display:
 			# Get bitrate and tracktype if they are available.  Try blocks used to prevent array out of bounds exception if values are not found
 			
 			# Limit reads to every 20 seconds to prevent the display from constantly updating if the bit rate is variable
-			if self.bitratereadexpired < time.time()
+			if self.bitratereadexpired < time.time():
 				self.bitratereadexpired = time.time() + 20
 				try:
-					bitrate = urllib.unquote(str(self.lmsplayer.request("songinfo 2 1 url:"+url+" tags:r", True))).decode('utf-8').split("bitrate:", 1)[1]
+					self.bitrate = urllib.unquote(str(self.lmsplayer.request("songinfo 2 1 url:"+url+" tags:r", True))).decode('utf-8').split("bitrate:", 1)[1]
 				except:
-					bitrate = u""
+					self.bitrate = u""
 
 			try:
 				tracktype = urllib.unquote(str(self.lmsplayer.request("songinfo 2 1 url:"+url+" tags:o", True))).decode('utf-8').split("type:",1)[1]
@@ -592,7 +594,7 @@ class RaspDac_Display:
 			if album is None: album = u""
 			if current is None: current = 0
 			if volume is None: volume = 0
-			if bitrate is None: bitrate = u""
+			if self.bitrate is None: self.bitrate = u""
 			if tracktype is None: tracktype = u""
 			if duration is None: duration = 0
 
@@ -603,7 +605,7 @@ class RaspDac_Display:
 				timepos = time.strftime("%M:%S", time.gmtime(int(current)))
 
 
-			return { 'state':u"play", 'artist':artist, 'title':title, 'album':album, 'current':current, 'duration':duration, 'position':timepos, 'volume':volume, 'playlist_position':playlist_position, 'playlist_count':playlist_count, 'bitrate':bitrate, 'type':tracktype }
+			return { 'state':u"play", 'artist':artist, 'title':title, 'album':album, 'current':current, 'duration':duration, 'position':timepos, 'volume':volume, 'playlist_position':playlist_position, 'playlist_count':playlist_count, 'bitrate':self.bitrate, 'type':tracktype }
 	  	else:
 			return { 'state':u"stop", 'artist':u"", 'title':u"", 'album':u"", 'current':0, 'duration':0, 'position':u"", 'volume':0, 'playlist_position':0, 'playlist_count':0, 'bitrate':u"", 'type':u""}
 
@@ -941,7 +943,7 @@ if __name__ == '__main__':
 			if page_expires < time.time():
 			
 				# make sure that bitrate read gets performed before next page view
-				self.bitratereadexpired = 0
+				rd.bitratereadexpired = 0
 
 				# Move to next page and check to see if it should be displayed or hidden
 				for i in range(len(current_pages['pages'])):
