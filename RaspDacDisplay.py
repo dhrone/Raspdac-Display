@@ -41,8 +41,8 @@ DISPLAY_WIDTH = 16 # the character width of the display
 DISPLAY_HEIGHT = 2 # the number of lines on the display
 
 # This is where the log file will be written
-LOGFILE='/var/log/RaspDacDisplay.log'
-#LOGFILE='./log/RaspDacDisplay.log'
+#LOGFILE='/var/log/RaspDacDisplay.log'
+LOGFILE='./log/RaspDacDisplay.log'
 
 # Adjust this setting to localize the time display to your region
 TIMEZONE="US/Eastern"
@@ -59,16 +59,16 @@ LOGLEVEL=logging.DEBUG
 #Configure which music services to monitor
 # For Volumio and RuneAudio MPD and SPOP should be enabled and LMS disabled
 # for Max2Play if you are using the Logitech Music Service, then LMS should be enabled
-MPD_ENABLED = True
+MPD_ENABLED = False
 MPD_SERVER = "localhost"
 MPD_PORT = 6600
 
-SPOP_ENABLED = True
+SPOP_ENABLED = False
 SPOP_SERVER = "localhost"
 SPOP_PORT = 6602
 
-LMS_ENABLED = False
-LMS_SERVER = "localhost"
+LMS_ENABLED = True
+LMS_SERVER = "192.168.254.251"
 LMS_PORT = 9090
 LMS_USER = ""
 LMS_PASSWORD = ""
@@ -79,8 +79,8 @@ LMS_PASSWORD = ""
 #       possible that your player has decided to join it, instead of the LMS on Max2Play
 #       To fix this, go to the SqueezeServer interface and change move the player to the
 #       correct server.
-LMS_PLAYER = "00:01:02:aa:bb:cc"
-
+#LMS_PLAYER = "00:01:02:aa:bb:cc"
+LMS_PLAYER = "00:04:20:06:43:10"
 
 # Page Definitions
 # See Page Format.txt for instructions and examples on how to modify your display settings
@@ -103,8 +103,8 @@ PAGES_Play = {
           },
           {
             'name':"bottom",
-            'variables': [ "position" ],
-            'format':"{0}",
+            'variables': [ "playlist_position", "playlist_count", "position" ],
+            'format':"{0}/{1} {2}",
             'justification':"left",
             'scroll':False
           }
@@ -120,8 +120,8 @@ PAGES_Play = {
           },
           {
             'name':"bottom",
-            'variables': [ "position" ],
-            'format':"{0}",
+            'variables': [ "playlist_position", "playlist_count", "position" ],
+            'format':"{0}/{1} {2}",
             'justification':"left",
             'scroll':False
           }
@@ -142,8 +142,8 @@ PAGES_Play = {
           },
           {
             'name':"bottom",
-            'variables': [ "position" ],
-            'format':"{0}",
+            'variables': [ "playlist_position", "playlist_count", "position" ],
+            'format':"{0}/{1} {2}",
             'justification':"left",
             'scroll':False
           }
@@ -159,8 +159,8 @@ PAGES_Play = {
           },
           {
             'name':"bottom",
-            'variables': [ "position" ],
-            'format':"{0}",
+            'variables': [ "playlist_position", "playlist_count", "position" ],
+            'format':"{0}/{1} {2}",
             'justification':"left",
             'scroll':False
           }
@@ -181,13 +181,53 @@ PAGES_Play = {
           },
           {
             'name':"bottom",
-            'variables': [ "position" ],
-            'format':"{0}",
+            'variables': [ "playlist_position", "playlist_count", "position" ],
+            'format':"{0}/{1} {2}",
+            'justification':"left",
+            'scroll':False
+          }
+        ]
+      },
+      {
+        'name':"Blank",
+        'duration':0.5,
+        'lines': [
+          {
+            'name':"top",
+            'format':"",
+          },
+          {
+            'name':"bottom",
+            'variables': [ "playlist_position", "playlist_count", "position" ],
+            'format':"{0}/{1} {2}",
+            'justification':"left",
+            'scroll':False
+          }
+        ]
+      },
+      {
+        'name':"Meta Data",
+        'duration':10,
+		'hidewhenempty':True,
+        'hidewhenemptyvars': [ "bitrate", "type" ],
+        'lines': [
+          {
+            'name':"top",
+            'variables': [ "bitrate", "type" ],
+            'format':"Rate: {0}, Type: {1}",
+            'justification':"left",
+            'scroll':True
+          },
+          {
+            'name':"bottom",
+            'variables': [ "playlist_position", "playlist_count", "position" ],
+            'format':"{0}/{1} {2}",
             'justification':"left",
             'scroll':False
           }
         ]
       }
+
     ]
 }
 
@@ -336,13 +376,11 @@ class RaspDac_Display:
 
 		self.tempreadexpired = 0
 		self.diskreadexpired = 0
-		self.bitratereadexpired = 0
 
 		self.tempc = 0.0
 		self.tempf = 0.0
 		self.avail = 0
 		self.availp = 0
-		self.bitrate = 0
 
 
 		# Initilize the connections to the music Daemons.  Currently supporting
@@ -434,14 +472,10 @@ class RaspDac_Display:
 
 			title = m_currentsong.get('title')
 			album = m_currentsong.get('album')
-			playlist_position = int(m_status.get('songid'))
+			playlist_position = int(m_status.get('song'))+1
 			playlist_count = int(m_status.get('playlistlength'))
 			volume = int(m_status.get('volume'))
-			
-			# Limit reads to every 20 seconds to prevent the display from constantly updating if the bit rate is variable
-			if self.bitratereadexpired < time.time():
-				self.bitratereadexpired = time.time() + 20
-				self.bitrate = m_status.get('bitrate')
+			bitrate = m_status.get('bitrate')
 
 			# Haven't found a way to get the file type from MPD
 			tracktype = u""
@@ -455,7 +489,7 @@ class RaspDac_Display:
 			if album is None: album = u""
 			if current is None: current = 0
 			if volume is None: volume = 0
-			if self.bitrate is None: self.bitrate = u""
+			if bitrate is None: bitrate = u""
 			if tracktype is None: tracktype = u""
 			if duration is None: duration = 0
 
@@ -465,7 +499,7 @@ class RaspDac_Display:
 			else:
 				timepos = time.strftime("%M:%S", time.gmtime(int(current)))
 
-			return { 'state':u"play", 'artist':artist, 'title':title, 'album':album, 'current':current, 'duration':duration, 'position':timepos, 'volume':volume, 'playlist_position':playlist_position, 'playlist_count':playlist_count, 'bitrate':self.bitrate, 'type':tracktype }
+			return { 'state':u"play", 'artist':artist, 'title':title, 'album':album, 'current':current, 'duration':duration, 'position':timepos, 'volume':volume, 'playlist_position':playlist_position, 'playlist_count':playlist_count, 'bitrate':bitrate, 'type':tracktype }
 	  	else:
 			return { 'state':u"stop", 'artist':u"", 'title':u"", 'album':u"", 'current':0, 'duration':0, 'position':u"", 'volume':0, 'playlist_position':0, 'playlist_count':0, 'bitrate':u"", 'type':u""}
 
@@ -573,14 +607,10 @@ class RaspDac_Display:
 			url = self.lmsplayer.get_track_path()
 
 			# Get bitrate and tracktype if they are available.  Try blocks used to prevent array out of bounds exception if values are not found
-			
-			# Limit reads to every 20 seconds to prevent the display from constantly updating if the bit rate is variable
-			if self.bitratereadexpired < time.time():
-				self.bitratereadexpired = time.time() + 20
-				try:
-					self.bitrate = urllib.unquote(str(self.lmsplayer.request("songinfo 2 1 url:"+url+" tags:r", True))).decode('utf-8').split("bitrate:", 1)[1]
-				except:
-					self.bitrate = u""
+			try:
+				bitrate = urllib.unquote(str(self.lmsplayer.request("songinfo 2 1 url:"+url+" tags:r", True))).decode('utf-8').split("bitrate:", 1)[1]
+			except:
+				bitrate = u""
 
 			try:
 				tracktype = urllib.unquote(str(self.lmsplayer.request("songinfo 2 1 url:"+url+" tags:o", True))).decode('utf-8').split("type:",1)[1]
@@ -595,7 +625,7 @@ class RaspDac_Display:
 			if album is None: album = u""
 			if current is None: current = 0
 			if volume is None: volume = 0
-			if self.bitrate is None: self.bitrate = u""
+			if bitrate is None: bitrate = u""
 			if tracktype is None: tracktype = u""
 			if duration is None: duration = 0
 
@@ -606,7 +636,7 @@ class RaspDac_Display:
 				timepos = time.strftime("%M:%S", time.gmtime(int(current)))
 
 
-			return { 'state':u"play", 'artist':artist, 'title':title, 'album':album, 'current':current, 'duration':duration, 'position':timepos, 'volume':volume, 'playlist_position':playlist_position, 'playlist_count':playlist_count, 'bitrate':self.bitrate, 'type':tracktype }
+			return { 'state':u"play", 'artist':artist, 'title':title, 'album':album, 'current':current, 'duration':duration, 'position':timepos, 'volume':volume, 'playlist_position':playlist_position, 'playlist_count':playlist_count, 'bitrate':bitrate, 'type':tracktype }
 	  	else:
 			return { 'state':u"stop", 'artist':u"", 'title':u"", 'album':u"", 'current':0, 'duration':0, 'position':u"", 'volume':0, 'playlist_position':0, 'playlist_count':0, 'bitrate':u"", 'type':u""}
 
@@ -970,9 +1000,6 @@ if __name__ == '__main__':
 
 			# if page has expired then move to the next page
 			if page_expires < time.time():
-			
-				# make sure that bitrate read gets performed before next page view
-				rd.bitratereadexpired = 0
 
 				# Move to next page and check to see if it should be displayed or hidden
 				for i in range(len(current_pages['pages'])):
