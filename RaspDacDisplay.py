@@ -41,8 +41,8 @@ DISPLAY_WIDTH = 16 # the character width of the display
 DISPLAY_HEIGHT = 2 # the number of lines on the display
 
 # This is where the log file will be written
-#LOGFILE='/var/log/RaspDacDisplay.log'
-LOGFILE='./log/RaspDacDisplay.log'
+LOGFILE='/var/log/RaspDacDisplay.log'
+#LOGFILE='./log/RaspDacDisplay.log'
 
 # Adjust this setting to localize the time display to your region
 TIMEZONE="US/Eastern"
@@ -59,16 +59,16 @@ LOGLEVEL=logging.DEBUG
 #Configure which music services to monitor
 # For Volumio and RuneAudio MPD and SPOP should be enabled and LMS disabled
 # for Max2Play if you are using the Logitech Music Service, then LMS should be enabled
-MPD_ENABLED = False
+MPD_ENABLED = True
 MPD_SERVER = "localhost"
 MPD_PORT = 6600
 
-SPOP_ENABLED = False
+SPOP_ENABLED = True
 SPOP_SERVER = "localhost"
 SPOP_PORT = 6602
 
-LMS_ENABLED = True
-LMS_SERVER = "192.168.254.251"
+LMS_ENABLED = False
+LMS_SERVER = "localhost"
 LMS_PORT = 9090
 LMS_USER = ""
 LMS_PASSWORD = ""
@@ -79,8 +79,7 @@ LMS_PASSWORD = ""
 #       possible that your player has decided to join it, instead of the LMS on Max2Play
 #       To fix this, go to the SqueezeServer interface and change move the player to the
 #       correct server.
-#LMS_PLAYER = "00:01:02:aa:bb:cc"
-LMS_PLAYER = "00:04:20:06:43:10"
+LMS_PLAYER = "00:01:02:aa:bb:cc"
 
 # Page Definitions
 # See Page Format.txt for instructions and examples on how to modify your display settings
@@ -376,12 +375,13 @@ class RaspDac_Display:
 
 		self.tempreadexpired = 0
 		self.diskreadexpired = 0
+		self.ratereadexpired = 0
 
 		self.tempc = 0.0
 		self.tempf = 0.0
 		self.avail = 0
 		self.availp = 0
-
+		self.rate = 0
 
 		# Initilize the connections to the music Daemons.  Currently supporting
 		# MPD and SPOP (for Spotify)
@@ -475,7 +475,12 @@ class RaspDac_Display:
 			playlist_position = int(m_status.get('song'))+1
 			playlist_count = int(m_status.get('playlistlength'))
 			volume = int(m_status.get('volume'))
-			bitrate = m_status.get('bitrate')
+
+			# MPDs rate data changes continuously.
+			# To prevent the screen from unnecessarily refreshing limit updates to every 20 seconds
+			if self.ratereadexpired < time.time():
+				self.ratereadexpired = time.time() + 20
+				self.bitrate = m_status.get('bitrate')
 
 			# Haven't found a way to get the file type from MPD
 			tracktype = u""
@@ -489,7 +494,7 @@ class RaspDac_Display:
 			if album is None: album = u""
 			if current is None: current = 0
 			if volume is None: volume = 0
-			if bitrate is None: bitrate = u""
+			if self.bitrate is None: self.bitrate = u""
 			if tracktype is None: tracktype = u""
 			if duration is None: duration = 0
 
@@ -499,7 +504,7 @@ class RaspDac_Display:
 			else:
 				timepos = time.strftime("%M:%S", time.gmtime(int(current)))
 
-			return { 'state':u"play", 'artist':artist, 'title':title, 'album':album, 'current':current, 'duration':duration, 'position':timepos, 'volume':volume, 'playlist_position':playlist_position, 'playlist_count':playlist_count, 'bitrate':bitrate, 'type':tracktype }
+			return { 'state':u"play", 'artist':artist, 'title':title, 'album':album, 'current':current, 'duration':duration, 'position':timepos, 'volume':volume, 'playlist_position':playlist_position, 'playlist_count':playlist_count, 'bitrate':self.bitrate, 'type':tracktype }
 	  	else:
 			return { 'state':u"stop", 'artist':u"", 'title':u"", 'album':u"", 'current':0, 'duration':0, 'position':u"", 'volume':0, 'playlist_position':0, 'playlist_count':0, 'bitrate':u"", 'type':u""}
 
