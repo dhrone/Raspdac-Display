@@ -5,6 +5,7 @@ import json
 import logging
 import commands
 import os
+import sys
 from mpd import MPDClient
 import pylms
 from pylms import server
@@ -49,8 +50,8 @@ TIME24HOUR=False
 #TIMEZONE="Europe/Paris"
 
 # Logging level
-#LOGLEVEL=logging.DEBUG
-LOGLEVEL=logging.INFO
+LOGLEVEL=logging.DEBUG
+#LOGLEVEL=logging.INFO
 #LOGLEVEL=logging.WARNING
 #LOGLEVEL=logging.CRITICAL
 
@@ -331,7 +332,7 @@ class RaspDac_Display:
 
 
 	def __init__(self):
-		logging.info("RaspDac_Display Initializing")
+		logging.debug("RaspDac_Display Initializing")
 
 		self.tempreadexpired = 0
 		self.diskreadexpired = 0
@@ -664,11 +665,23 @@ class RaspDac_Display:
 		if self.diskreadexpired < time.time():
 			self.diskreadexpired = time.time() + 20
 			try:
-				p = os.popen("df --output='avail','pcent' /")
-				line = p.readline()
-				line = p.readline().strip()
-				self.avail = line[0:line.find("   ")]
-				self.availp = line[line.find("   ")+3:]
+				# Check if running on OSX.  If yes, adjust df command
+				if sys.platform == "darwin":
+					p = os.popen("df /")
+					line = p.readline()
+					line = p.readline()
+					va = line.split()
+					line = "{0} {1}".format(va[3], va[4])
+				else:
+					# assume running on Raspberry linux
+					p = os.popen("df --output='avail','pcent' /")
+					line = p.readline()
+					line = p.readline().strip()
+
+				va = line.split()
+				self.avail = va[0]
+				self.availp = va[1]
+
 				# remove % sign
 				self.availp = self.availp[0:len(self.availp)-1]
 
@@ -795,9 +808,26 @@ def sigterm_handler(_signo, _stack_frame):
         sys.exit(0)
 
 if __name__ == '__main__':
-        signal.signal(signal.SIGTERM, sigterm_handler)
-        logging.basicConfig(format='%(asctime)s:%(levelname)s:%(message)s', filename=LOGFILE, level=LOGLEVEL)
-	logging.info("RaspDac Display Startup")
+	signal.signal(signal.SIGTERM, sigterm_handler)
+	logging.basicConfig(format='%(asctime)s:%(levelname)s:%(message)s', filename=LOGFILE, level=LOGLEVEL)
+
+	# Move unhandled exception messages to log file
+	def handleuncaughtexcpetions(exc_type, exc_value, exc_traceback):
+		if issubclass(exc_type, KeyboardInterrupt):
+			sys.__excepthook__(exc_type, exc_value, exc_traceback)
+			return
+
+		logging.error("Uncaught exception", exc_info=(exc_type, exc_value, exc_traceback))
+		sys.__excepthook__(exc_type, exc_value, exc_traceback)
+
+
+	sys.excepthook = handleuncaughtexcpetions
+
+	logging.info("Raspdac display starting...")
+
+	# Suppress MPD libraries INFO messages
+	loggingMPD = logging.getLogger("mpd")
+	loggingMPD.setLevel( logging.WARN )
 
 	try:
 		dq = Queue.Queue()  # Create display Queue
@@ -814,7 +844,6 @@ if __name__ == '__main__':
 		sys.exit(0)
 
 	try:
-
 		current_page_number = -1
 		current_line_number = 0
 		page_expires = 0
@@ -1076,7 +1105,7 @@ if __name__ == '__main__':
 
 	finally:
 		dq.put(["Goodbye!",""])
-		logging.info("Goodbye!")
+		logging.info("Raspdac display shutting down")
 		try:
 			rd.client.disconnect()
 		except:
