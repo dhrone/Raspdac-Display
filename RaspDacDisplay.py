@@ -531,7 +531,7 @@ class RaspDac_Display:
 				playlist_display = "{0}/{1}".format(playlist_position, playlist_count)
 			except:
 				# else we are not in a playlist and can assume we are streaming
-				playlist_display = "Radio"
+				playlist_display = "Streaming"
 
 			return { 'state':u"play", 'artist':artist, 'title':title, 'album':album, 'current':current, 'duration':duration, 'position':timepos, 'volume':volume, 'playlist_display':playlist_display, 'playlist_position':playlist_position, 'playlist_count':playlist_count, 'bitrate':self.bitrate, 'type':tracktype }
 	  	else:
