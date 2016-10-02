@@ -1042,7 +1042,7 @@ if __name__ == '__main__':
 					try:
 						hwe = cp['hidewhenempty']
 					except KeyError:
-						hwe = False
+						hwe = 'False'
 
 					# to prevent old pages format from causing problems, convert value to string
 					if type(hwe) is bool:
@@ -1091,7 +1091,7 @@ if __name__ == '__main__':
 								# if the variable is not in cstatus consider it empty
 								anyempty = True
 								break
-						if anyempty:
+						if not anyempty:
 							break
 
 					else:
