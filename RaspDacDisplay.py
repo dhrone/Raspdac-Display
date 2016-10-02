@@ -102,8 +102,8 @@ PAGES_Play = {
           },
           {
             'name':"bottom",
-            'variables': [ "playlist_position", "playlist_count", "position" ],
-            'format':"{0}/{1} {2}",
+            'variables': [ "playlist_display", "position" ],
+            'format':"{0} {1}",
             'justification':"left",
             'scroll':False
           }
@@ -119,8 +119,8 @@ PAGES_Play = {
           },
           {
             'name':"bottom",
-            'variables': [ "playlist_position", "playlist_count", "position" ],
-            'format':"{0}/{1} {2}",
+            'variables': [ "playlist_display", "position" ],
+            'format':"{0} {1}",
             'justification':"left",
             'scroll':False
           }
@@ -141,8 +141,8 @@ PAGES_Play = {
           },
           {
             'name':"bottom",
-            'variables': [ "playlist_position", "playlist_count", "position" ],
-            'format':"{0}/{1} {2}",
+            'variables': [ "playlist_display", "position" ],
+            'format':"{0} {1}",
             'justification':"left",
             'scroll':False
           }
@@ -158,8 +158,8 @@ PAGES_Play = {
           },
           {
             'name':"bottom",
-            'variables': [ "playlist_position", "playlist_count", "position" ],
-            'format':"{0}/{1} {2}",
+            'variables': [ "playlist_display", "position" ],
+            'format':"{0} {1}",
             'justification':"left",
             'scroll':False
           }
@@ -180,8 +180,8 @@ PAGES_Play = {
           },
           {
             'name':"bottom",
-            'variables': [ "playlist_position", "playlist_count", "position" ],
-            'format':"{0}/{1} {2}",
+            'variables': [ "playlist_display", "position" ],
+            'format':"{0} {1}",
             'justification':"left",
             'scroll':False
           }
@@ -197,8 +197,8 @@ PAGES_Play = {
           },
           {
             'name':"bottom",
-            'variables': [ "playlist_position", "playlist_count", "position" ],
-            'format':"{0}/{1} {2}",
+            'variables': [ "playlist_display", "position" ],
+            'format':"{0} {1}",
             'justification':"left",
             'scroll':False
           }
@@ -219,8 +219,8 @@ PAGES_Play = {
           },
           {
             'name':"bottom",
-            'variables': [ "playlist_position", "playlist_count", "position" ],
-            'format':"{0}/{1} {2}",
+            'variables': [ "playlist_display", "position" ],
+            'format':"{0} {1}",
             'justification':"left",
             'scroll':False
           }
@@ -458,7 +458,7 @@ class RaspDac_Display:
 				m_currentsong = self.client.currentsong()
 			except:
 				logging.debug("Could not get status from MPD daemon")
-				return { 'state':u"stop", 'artist':u"", 'title':u"", 'album':u"", 'current':0, 'duration':0, 'position':u"", 'volume':0, 'playlist_position':0, 'playlist_count':0, 'bitrate':u"", 'type':u"" }
+				return { 'state':u"stop", 'artist':u"", 'title':u"", 'album':u"", 'current':0, 'duration':0, 'position':u"", 'volume':0, 'playlist_display':u"", 'playlist_position':0, 'playlist_count':0, 'bitrate':u"", 'type':u"" }
 
 		state = m_status.get('state')
 		if state == "play":
@@ -525,9 +525,17 @@ class RaspDac_Display:
 			else:
 				timepos = time.strftime("%M:%S", time.gmtime(int(current)))
 
-			return { 'state':u"play", 'artist':artist, 'title':title, 'album':album, 'current':current, 'duration':duration, 'position':timepos, 'volume':volume, 'playlist_position':playlist_position, 'playlist_count':playlist_count, 'bitrate':self.bitrate, 'type':tracktype }
+			# If the variable nextsong exists, we are playing from a playlist and can display track position and track count
+			try:
+				nextsong = m_status['nextsong']
+				playlist_display = "{0}/{1}".format(playlist_position, playlist_count)
+			except:
+				# else we are not in a playlist and can assume we are streaming
+				playlist_display = "Radio"
+
+			return { 'state':u"play", 'artist':artist, 'title':title, 'album':album, 'current':current, 'duration':duration, 'position':timepos, 'volume':volume, 'playlist_display':playlist_display, 'playlist_position':playlist_position, 'playlist_count':playlist_count, 'bitrate':self.bitrate, 'type':tracktype }
 	  	else:
-			return { 'state':u"stop", 'artist':u"", 'title':u"", 'album':u"", 'current':0, 'duration':0, 'position':u"", 'volume':0, 'playlist_position':0, 'playlist_count':0, 'bitrate':u"", 'type':u""}
+			return { 'state':u"stop", 'artist':u"", 'title':u"", 'album':u"", 'current':0, 'duration':0, 'position':u"", 'volume':0, 'playlist_display':u"", 'playlist_position':u"", 'playlist_count':0, 'bitrate':u"", 'type':u""}
 
 	def status_spop(self):
 		# Try to get status from SPOP daemon
@@ -544,7 +552,7 @@ class RaspDac_Display:
 				spot_status_string = self.spotclient.read_until("\n").strip()
 			except:
 				logging.debug("Could not get status from SPOP daemon")
-				return { 'state':u"stop", 'artist':u"", 'title':u"", 'album':u"", 'current':0, 'duration':0, 'position':u"", 'volume':0, 'playlist_position':0, 'playlist_count':0, 'bitrate':u"", 'type':u""}
+				return { 'state':u"stop", 'artist':u"", 'title':u"", 'album':u"", 'current':0, 'duration':0, 'position':u"", 'volume':0, 'playlist_display':u"", 'playlist_position':0, 'playlist_count':0, 'bitrate':u"", 'type':u""}
 
 		spot_status = json.loads(spot_status_string)
 
@@ -585,9 +593,11 @@ class RaspDac_Display:
 			else:
 				timepos = time.strftime("%M:%S", time.gmtime(int(current)))
 
-			return { 'state':u"play", 'artist':artist, 'title':title, 'album':album, 'current':current, 'duration':duration, 'position':timepos, 'volume':volume, 'playlist_position':playlist_position, 'playlist_count':playlist_count, 'bitrate':bitrate, 'type':tracktype }
+			playlist_display = "{0}/{1}".format(playlist_position, playlist_count)
+
+			return { 'state':u"play", 'artist':artist, 'title':title, 'album':album, 'current':current, 'duration':duration, 'position':timepos, 'volume':volume, 'playlist_display':playlist_display, 'playlist_position':playlist_position, 'playlist_count':playlist_count, 'bitrate':bitrate, 'type':tracktype }
 	  	else:
-			return { 'state':u"stop", 'artist':u"", 'title':u"", 'album':u"", 'current':0, 'duration':0, 'position':u"", 'volume':0, 'playlist_position':0, 'playlist_count':0, 'bitrate':u"", 'type':u""}
+			return { 'state':u"stop", 'artist':u"", 'title':u"", 'album':u"", 'current':0, 'duration':0, 'position':u"", 'volume':0, 'playlist_display':u"", 'playlist_position':0, 'playlist_count':0, 'bitrate':u"", 'type':u""}
 
 
 	def status_lms(self):
@@ -616,7 +626,7 @@ class RaspDac_Display:
 				lms_status = self.lmsplayer.get_mode()
 			except (socket_error, AttributeError, IndexError):
 				logging.debug("Could not get status from LMS daemon")
-				return { 'state':u"stop", 'artist':u"", 'title':u"", 'album':u"", 'current':0, 'duration':0, 'position':u"", 'volume':0, 'playlist_position':0, 'playlist_count':0, 'bitrate':u"", 'type':u"", 'current_time':u""}
+				return { 'state':u"stop", 'artist':u"", 'title':u"", 'album':u"", 'current':0, 'duration':0, 'position':u"", 'volume':0, 'playlist_display':u"", 'playlist_position':0, 'playlist_count':0, 'bitrate':u"", 'type':u"", 'current_time':u""}
 
 
 	  	if lms_status == "play":
@@ -643,6 +653,8 @@ class RaspDac_Display:
 			except:
 				tracktype = u""
 
+			playlist_display = "{0}/{1}".format(playlist_position, playlist_count)
+
 		  	# since we are returning the info as a JSON formatted return, convert
 		  	# any None's into reasonable values
 
@@ -662,9 +674,9 @@ class RaspDac_Display:
 				timepos = time.strftime("%M:%S", time.gmtime(int(current)))
 
 
-			return { 'state':u"play", 'artist':artist, 'title':title, 'album':album, 'current':current, 'duration':duration, 'position':timepos, 'volume':volume, 'playlist_position':playlist_position, 'playlist_count':playlist_count, 'bitrate':bitrate, 'type':tracktype }
+			return { 'state':u"play", 'artist':artist, 'title':title, 'album':album, 'current':current, 'duration':duration, 'position':timepos, 'volume':volume, 'playlist_display':playlist_display,'playlist_position':playlist_position, 'playlist_count':playlist_count, 'bitrate':bitrate, 'type':tracktype }
 	  	else:
-			return { 'state':u"stop", 'artist':u"", 'title':u"", 'album':u"", 'current':0, 'duration':0, 'position':u"", 'volume':0, 'playlist_position':0, 'playlist_count':0, 'bitrate':u"", 'type':u""}
+			return { 'state':u"stop", 'artist':u"", 'title':u"", 'album':u"", 'current':0, 'duration':0, 'position':u"", 'volume':0, 'playlist_display':u"", 'playlist_position':0, 'playlist_count':0, 'bitrate':u"", 'type':u""}
 
 
 	def status(self):
@@ -1044,9 +1056,17 @@ if __name__ == '__main__':
 					except KeyError:
 						hwe = 'False'
 
-					# to prevent old pages format from causing problems, convert value to string
+					try:
+						hwp = cp['hidewhenpresent']
+					except:
+						hwp = 'False'
+
+					# to prevent old pages format from causing problems, convert values to strings
 					if type(hwe) is bool:
 						hwe = str(hwe)
+
+					if type(hwp) is bool:
+						hwp = str(hwp)
 
 					if hwe.lower() == 'all' or hwe.lower() == 'true':
 						allempty = True
@@ -1061,6 +1081,10 @@ if __name__ == '__main__':
 								if type(cstatus[v]) is unicode:
 									# and it is not empty, then set allempty False and exit loop
 									if len(cstatus[v]) > 0:
+										allempty = False
+										break
+								elif type(cstatus[v]) is int:
+									if not cstatus[v] == 0:
 										allempty = False
 										break
 								else:
@@ -1087,6 +1111,12 @@ if __name__ == '__main__':
 									if len(cstatus[v]) == 0:
 										anyempty = True
 										break
+
+								# if the value is 0 consider it empty
+								elif type(cstatus[v]) is int:
+									if cstatus[v] == 0:
+										anyempty = True
+										break
 							except KeyError:
 								# if the variable is not in cstatus consider it empty
 								anyempty = True
@@ -1094,8 +1124,64 @@ if __name__ == '__main__':
 						if not anyempty:
 							break
 
+					elif hwp.lower() == 'any':
+						anypresent = False
+						try:
+							hvars = cp['hidewhenpresentvars']
+						except KeyError:
+							hvars = [ ]
+
+						for v in hvars:
+							try:
+								# if the variable is a string
+								if type(cstatus[v]) is unicode:
+									# and it is present, then set anypresent True and exit loop
+									if len(cstatus[v]) > 0:
+										anypresent = True
+										break
+								elif type(cstatus[v]) is int:
+									if not cstatus[v] == 0:
+										anypresent = True
+										break
+
+								# if it is not a string, and not zero consider it present
+								else:
+									anypresent = True
+									break
+							except KeyError:
+								# if the variable is not in cstatus consider it empty
+								break
+						if not anypresent:
+							break
+
+					elif hwp.lower() == 'all' or hwp.lower() == 'true':
+						allpresent = True
+						try:
+							hvars = cp['hidewhenemptyvars']
+						except KeyError:
+							hvars = [ ]
+
+						for v in hvars:
+							try:
+								# if the variable is a string
+								if type(cstatus[v]) is unicode:
+									# and it is not present, then set allpresent False and exit loop
+									if len(cstatus[v]) == 0:
+										allpresent = False
+										break
+								elif type(cstatus[v]) is int:
+									if cstatus[v] == 0:
+										allpresent = False
+										break
+							except KeyError:
+								# if the variable is not in cstatus consider it empty
+								allpresent = False
+								break
+						if not allpresent:
+							break
+
 					else:
-						# If not hidewhenempty then exit loop
+						# If not hidewhenempty or hidewhenpresent then exit loop
 						break
 
 
