@@ -1044,7 +1044,11 @@ if __name__ == '__main__':
 					except KeyError:
 						hwe = False
 
-					if hwe:
+					# to prevent old pages format from causing problems, convert value to string
+					if type(hwe) is bool:
+						hwe = str(hwe)
+
+					if hwe.lower() == 'all' or hwe.lower() == 'true':
 						allempty = True
 						try:
 							hvars = cp['hidewhenemptyvars']
@@ -1052,7 +1056,6 @@ if __name__ == '__main__':
 							hvars = [ ]
 
 						for v in hvars:
-
 							try:
 								# if the variable is a string
 								if type(cstatus[v]) is unicode:
@@ -1069,6 +1072,28 @@ if __name__ == '__main__':
 								pass
 						if not allempty:
 							break
+					elif hwe.lower() == 'any':
+						anyempty = False
+						try:
+							hvars = cp['hidewhenemptyvars']
+						except KeyError:
+							hvars = [ ]
+
+						for v in hvars:
+							try:
+								# if the variable is a string
+								if type(cstatus[v]) is unicode:
+									# and it is empty, then set anyempty True and exit loop
+									if len(cstatus[v]) == 0:
+										anyempty = True
+										break
+							except KeyError:
+								# if the variable is not in cstatus consider it empty
+								anyempty = True
+								break
+						if anyempty:
+							break
+
 					else:
 						# If not hidewhenempty then exit loop
 						break

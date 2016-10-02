@@ -16,7 +16,10 @@ PageList consists of...
 A Page consists of...
   name: The name of the page
   duration: Length of time to display the page
-  hidewhenempty: Directive to hide page if variables are empty (True, False)
+  hidewhenempty: Directive to hide page if variables are empty (True or all, any, False)
+                 If set to all or True, all variables must by empty for the page to be skipped
+                 If set to any, any empty variable will cause the page to be skipped
+                 Any other value will force the page to be displayed regardless of variable value
   hidewhenemptyvars: A list of variables to test for empty if hidewhenempty is set
   lines: An array of lines to display on the page
 
@@ -65,7 +68,7 @@ PAGES_Play = {
       {
         'name':"Album",
         'duration':10,
-        'hidewhenempty':True,
+        'hidewhenempty':all,
         'hidewhenemptyvars': [ "album" ],
         'lines': [
           {
@@ -77,8 +80,8 @@ PAGES_Play = {
           },
           {
             'name':"bottom",
-            'variables': [ "position" ],
-            'format':"{0}",
+            'variables': [ "playlist_position", "playlist_count", "position" ],
+            'format':"{0}/{1} {2}",
             'justification':"left",
             'scroll':False
           }
@@ -94,8 +97,8 @@ PAGES_Play = {
           },
           {
             'name':"bottom",
-            'variables': [ "position" ],
-            'format':"{0}",
+            'variables': [ "playlist_position", "playlist_count", "position" ],
+            'format':"{0}/{1} {2}",
             'justification':"left",
             'scroll':False
           }
@@ -104,7 +107,7 @@ PAGES_Play = {
       {
         'name':"Artist",
         'duration':10,
-        'hidewhenempty':True,
+    		'hidewhenempty':all,
         'hidewhenemptyvars': [ "artist" ],
         'lines': [
           {
@@ -116,8 +119,8 @@ PAGES_Play = {
           },
           {
             'name':"bottom",
-            'variables': [ "position" ],
-            'format':"{0}",
+            'variables': [ "playlist_position", "playlist_count", "position" ],
+            'format':"{0}/{1} {2}",
             'justification':"left",
             'scroll':False
           }
@@ -133,8 +136,8 @@ PAGES_Play = {
           },
           {
             'name':"bottom",
-            'variables': [ "position" ],
-            'format':"{0}",
+            'variables': [ "playlist_position", "playlist_count", "position" ],
+            'format':"{0}/{1} {2}",
             'justification':"left",
             'scroll':False
           }
@@ -143,7 +146,7 @@ PAGES_Play = {
       {
         'name':"Title",
         'duration':10,
-        'hidewhenempty': True,
+    		'hidewhenempty':all,
         'hidewhenemptyvars': [ "title" ],
         'lines': [
           {
@@ -155,13 +158,53 @@ PAGES_Play = {
           },
           {
             'name':"bottom",
-            'variables': [ "position" ],
-            'format':"{0}",
+            'variables': [ "playlist_position", "playlist_count", "position" ],
+            'format':"{0}/{1} {2}",
+            'justification':"left",
+            'scroll':False
+          }
+        ]
+      },
+      {
+        'name':"Blank",
+        'duration':0.5,
+        'lines': [
+          {
+            'name':"top",
+            'format':"",
+          },
+          {
+            'name':"bottom",
+            'variables': [ "playlist_position", "playlist_count", "position" ],
+            'format':"{0}/{1} {2}",
+            'justification':"left",
+            'scroll':False
+          }
+        ]
+      },
+      {
+        'name':"Meta Data",
+        'duration':10,
+    		'hidewhenempty':any,
+        'hidewhenemptyvars': [ "bitrate", "type" ],
+        'lines': [
+          {
+            'name':"top",
+            'variables': [ "bitrate", "type" ],
+            'format':"Rate: {0}, Type: {1}",
+            'justification':"left",
+            'scroll':True
+          },
+          {
+            'name':"bottom",
+            'variables': [ "playlist_position", "playlist_count", "position" ],
+            'format':"{0}/{1} {2}",
             'justification':"left",
             'scroll':False
           }
         ]
       }
+
     ]
 }
 
