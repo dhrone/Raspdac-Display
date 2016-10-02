@@ -14,7 +14,7 @@ PAGES_Play = {
       {
         'name':"Album",
         'duration':10,
-		'hidewhenempty':True,
+		'hidewhenempty':'any',
         'hidewhenemptyvars': [ "album" ],
         'lines': [
           {
@@ -26,8 +26,8 @@ PAGES_Play = {
           },
           {
             'name':"bottom",
-            'variables': [ "playlist_position", "playlist_count", "position" ],
-            'format':"{0}/{1} {2}",
+            'variables': [ "playlist_display", "position" ],
+            'format':"{0} {1}",
             'justification':"left",
             'scroll':False
           }
@@ -43,8 +43,8 @@ PAGES_Play = {
           },
           {
             'name':"bottom",
-            'variables': [ "playlist_position", "playlist_count", "position" ],
-            'format':"{0}/{1} {2}",
+            'variables': [ "playlist_display", "position" ],
+            'format':"{0} {1}",
             'justification':"left",
             'scroll':False
           }
@@ -53,7 +53,7 @@ PAGES_Play = {
       {
         'name':"Artist",
         'duration':10,
-		'hidewhenempty':True,
+		'hidewhenempty':'any',
         'hidewhenemptyvars': [ "artist" ],
         'lines': [
           {
@@ -65,8 +65,8 @@ PAGES_Play = {
           },
           {
             'name':"bottom",
-            'variables': [ "playlist_position", "playlist_count", "position" ],
-            'format':"{0}/{1} {2}",
+            'variables': [ "playlist_display", "position" ],
+            'format':"{0} {1}",
             'justification':"left",
             'scroll':False
           }
@@ -82,8 +82,8 @@ PAGES_Play = {
           },
           {
             'name':"bottom",
-            'variables': [ "playlist_position", "playlist_count", "position" ],
-            'format':"{0}/{1} {2}",
+            'variables': [ "playlist_display", "position" ],
+            'format':"{0} {1}",
             'justification':"left",
             'scroll':False
           }
@@ -92,7 +92,7 @@ PAGES_Play = {
       {
         'name':"Title",
         'duration':10,
-		'hidewhenempty':True,
+		'hidewhenempty':'any',
         'hidewhenemptyvars': [ "title" ],
         'lines': [
           {
@@ -104,8 +104,8 @@ PAGES_Play = {
           },
           {
             'name':"bottom",
-            'variables': [ "playlist_position", "playlist_count", "position" ],
-            'format':"{0}/{1} {2}",
+            'variables': [ "playlist_display", "position" ],
+            'format':"{0} {1}",
             'justification':"left",
             'scroll':False
           }
@@ -121,8 +121,8 @@ PAGES_Play = {
           },
           {
             'name':"bottom",
-            'variables': [ "playlist_position", "playlist_count", "position" ],
-            'format':"{0}/{1} {2}",
+            'variables': [ "playlist_display", "position" ],
+            'format':"{0} {1}",
             'justification':"left",
             'scroll':False
           }
@@ -131,7 +131,7 @@ PAGES_Play = {
       {
         'name':"Meta Data",
         'duration':10,
-		'hidewhenempty':True,
+		'hidewhenempty':'any',
         'hidewhenemptyvars': [ "bitrate", "type" ],
         'lines': [
           {
@@ -143,8 +143,8 @@ PAGES_Play = {
           },
           {
             'name':"bottom",
-            'variables': [ "playlist_position", "playlist_count", "position" ],
-            'format':"{0}/{1} {2}",
+            'variables': [ "playlist_display", "position" ],
+            'format':"{0} {1}",
             'justification':"left",
             'scroll':False
           }

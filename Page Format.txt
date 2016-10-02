@@ -46,6 +46,8 @@ The variable values that you use within your PageLists must be returned by the s
   'volume' - The current volume of the player
   'playlist_position' - The number of the current track in the play list
   'playlist_count' - The number of tracks currently in the play list
+  'playlist_display' - A formatted combination of playlist_count and playlist_display (e.g. ##/##)
+                       Displays "Streaming" if content is a streaming source without playlist information
   'bitrate' - The bitrate of the current track
   'type' - The encoding type of the current track (e.g. FLAC, MP3)
   'current_tempc' - Current system temperature in celsius
