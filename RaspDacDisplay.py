@@ -482,8 +482,26 @@ class RaspDac_Display:
 				self.ratereadexpired = time.time() + 20
 				self.bitrate = m_status.get('bitrate')
 
-			# Haven't found a way to get the file type from MPD
-			tracktype = u""
+			audio = m_status['audio'].split(':')
+			if len(audio) == 3:
+				sample = round(float(audio[0])/1000,1)
+			 	bits = audio[1]
+			 	if audio[2] == '1':
+					channels = 'Mono'
+			 	elif audio[2] == '2':
+				 	channels = 'Stereo'
+			 	elif int(audio[2]) > 2:
+				 	channels = 'Multi'
+			 	else:
+				 	channels = u""
+
+		 	 	if channels == u"":
+				 	tracktype = "{0} bit, {1} kHz".format(bits, sample)
+			 	else:
+			 		tracktype = "{0}, {1} bit, {2} kHz".format(channels, bits, sample)
+			else:
+				# If audio information not available just send that MPD is the source
+				tracktype = u"MPD"
 
 			(current, duration) = (m_status.get('time').split(":"))
 
