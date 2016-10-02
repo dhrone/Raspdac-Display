@@ -68,7 +68,7 @@ PAGES_Play = {
       {
         'name':"Album",
         'duration':10,
-        'hidewhenempty':all,
+        'hidewhenempty':'all',
         'hidewhenemptyvars': [ "album" ],
         'lines': [
           {
@@ -107,7 +107,7 @@ PAGES_Play = {
       {
         'name':"Artist",
         'duration':10,
-    		'hidewhenempty':all,
+    		'hidewhenempty':'all',
         'hidewhenemptyvars': [ "artist" ],
         'lines': [
           {
@@ -146,7 +146,7 @@ PAGES_Play = {
       {
         'name':"Title",
         'duration':10,
-    		'hidewhenempty':all,
+    		'hidewhenempty':'all',
         'hidewhenemptyvars': [ "title" ],
         'lines': [
           {
@@ -185,7 +185,7 @@ PAGES_Play = {
       {
         'name':"Meta Data",
         'duration':10,
-    		'hidewhenempty':any,
+    		'hidewhenempty':'any',
         'hidewhenemptyvars': [ "bitrate", "type" ],
         'lines': [
           {
