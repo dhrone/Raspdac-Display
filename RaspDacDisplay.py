@@ -480,7 +480,7 @@ class RaspDac_Display:
 			# To prevent the screen from unnecessarily refreshing limit updates to every 20 seconds
 			if self.ratereadexpired < time.time():
 				self.ratereadexpired = time.time() + 20
-				self.bitrate = m_status.get('bitrate')
+				self.bitrate = "{0} kbps".format(m_status.get('bitrate'))
 
 			audio = m_status['audio'].split(':')
 			if len(audio) == 3:
