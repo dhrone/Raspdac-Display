@@ -50,8 +50,8 @@ TIME24HOUR=False
 #TIMEZONE="Europe/Paris"
 
 # Logging level
-LOGLEVEL=logging.DEBUG
-#LOGLEVEL=logging.INFO
+#LOGLEVEL=logging.DEBUG
+LOGLEVEL=logging.INFO
 #LOGLEVEL=logging.WARNING
 #LOGLEVEL=logging.CRITICAL
 
@@ -482,26 +482,29 @@ class RaspDac_Display:
 				self.ratereadexpired = time.time() + 20
 				self.bitrate = "{0} kbps".format(m_status.get('bitrate'))
 
-			audio = m_status['audio'].split(':')
-			if len(audio) == 3:
-				sample = round(float(audio[0])/1000,1)
-			 	bits = audio[1]
-			 	if audio[2] == '1':
-					channels = 'Mono'
-			 	elif audio[2] == '2':
-				 	channels = 'Stereo'
-			 	elif int(audio[2]) > 2:
-				 	channels = 'Multi'
-			 	else:
-				 	channels = u""
+			try:
+				audio = m_status['audio'].split(':')
+				if len(audio) == 3:
+					sample = round(float(audio[0])/1000,1)
+				 	bits = audio[1]
+				 	if audio[2] == '1':
+						channels = 'Mono'
+				 	elif audio[2] == '2':
+					 	channels = 'Stereo'
+				 	elif int(audio[2]) > 2:
+					 	channels = 'Multi'
+				 	else:
+					 	channels = u""
 
-		 	 	if channels == u"":
-				 	tracktype = "{0} bit, {1} kHz".format(bits, sample)
-			 	else:
-			 		tracktype = "{0}, {1} bit, {2} kHz".format(channels, bits, sample)
-			else:
-				# If audio information not available just send that MPD is the source
-				tracktype = u"MPD"
+			 	 	if channels == u"":
+					 	tracktype = "{0} bit, {1} kHz".format(bits, sample)
+				 	else:
+				 		tracktype = "{0}, {1} bit, {2} kHz".format(channels, bits, sample)
+				else:
+					# If audio information not available just send that MPD is the source
+					tracktype = u"MPD"
+			except KeyError:
+				tracktype = u""
 
 			(current, duration) = (m_status.get('time').split(":"))
 
