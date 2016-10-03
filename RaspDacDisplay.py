@@ -535,9 +535,9 @@ class RaspDac_Display:
 				# else we are not in a playlist and can assume we are streaming
 				playlist_display = "Streaming"
 
-			return { 'state':u"play", 'artist':artist, 'title':title, 'album':album, 'remaining':u"", 'current':current, 'duration':duration, 'position':timepos, 'volume':volume, 'playlist_display':playlist_display, 'playlist_position':playlist_position, 'playlist_count':playlist_count, 'bitrate':self.bitrate, 'type':tracktype }
+			return { 'state':u"play", 'artist':artist, 'title':title, 'album':album, 'remaining':remaining, 'current':current, 'duration':duration, 'position':timepos, 'volume':volume, 'playlist_display':playlist_display, 'playlist_position':playlist_position, 'playlist_count':playlist_count, 'bitrate':self.bitrate, 'type':tracktype }
 	  	else:
-			return { 'state':u"stop", 'artist':u"", 'title':u"", 'album':u"", 'remaining':remaining, 'current':0, 'duration':0, 'position':u"", 'volume':0, 'playlist_display':u"", 'playlist_position':u"", 'playlist_count':0, 'bitrate':u"", 'type':u""}
+			return { 'state':u"stop", 'artist':u"", 'title':u"", 'album':u"", 'remaining':u"", 'current':0, 'duration':0, 'position':u"", 'volume':0, 'playlist_display':u"", 'playlist_position':u"", 'playlist_count':0, 'bitrate':u"", 'type':u""}
 
 	def status_spop(self):
 		# Try to get status from SPOP daemon
