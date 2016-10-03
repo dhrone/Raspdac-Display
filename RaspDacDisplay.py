@@ -458,7 +458,7 @@ class RaspDac_Display:
 				m_currentsong = self.client.currentsong()
 			except:
 				logging.debug("Could not get status from MPD daemon")
-				return { 'state':u"stop", 'artist':u"", 'title':u"", 'album':u"", 'current':0, 'duration':0, 'position':u"", 'volume':0, 'playlist_display':u"", 'playlist_position':0, 'playlist_count':0, 'bitrate':u"", 'type':u"" }
+				return { 'state':u"stop", 'artist':u"", 'title':u"", 'album':u"", 'current':0, 'remaining':u"", 'duration':0, 'position':u"", 'volume':0, 'playlist_display':u"", 'playlist_position':0, 'playlist_count':0, 'bitrate':u"", 'type':u"" }
 
 		state = m_status.get('state')
 		if state == "play":
@@ -522,8 +522,10 @@ class RaspDac_Display:
 			# if duration is not available, then suppress its display
 			if int(duration) > 0:
 				timepos = time.strftime("%M:%S", time.gmtime(int(current))) + "/" + time.strftime("%M:%S", time.gmtime(int(duration)))
+				remaining = time.strftime("%M:%S", time.gmtime(int(duration - current)))
 			else:
 				timepos = time.strftime("%M:%S", time.gmtime(int(current)))
+				remaining = timepos
 
 			# If the variable nextsong exists, we are playing from a playlist and can display track position and track count
 			try:
@@ -533,9 +535,9 @@ class RaspDac_Display:
 				# else we are not in a playlist and can assume we are streaming
 				playlist_display = "Streaming"
 
-			return { 'state':u"play", 'artist':artist, 'title':title, 'album':album, 'current':current, 'duration':duration, 'position':timepos, 'volume':volume, 'playlist_display':playlist_display, 'playlist_position':playlist_position, 'playlist_count':playlist_count, 'bitrate':self.bitrate, 'type':tracktype }
+			return { 'state':u"play", 'artist':artist, 'title':title, 'album':album, 'remaining':u"", 'current':current, 'duration':duration, 'position':timepos, 'volume':volume, 'playlist_display':playlist_display, 'playlist_position':playlist_position, 'playlist_count':playlist_count, 'bitrate':self.bitrate, 'type':tracktype }
 	  	else:
-			return { 'state':u"stop", 'artist':u"", 'title':u"", 'album':u"", 'current':0, 'duration':0, 'position':u"", 'volume':0, 'playlist_display':u"", 'playlist_position':u"", 'playlist_count':0, 'bitrate':u"", 'type':u""}
+			return { 'state':u"stop", 'artist':u"", 'title':u"", 'album':u"", 'remaining':remaining, 'current':0, 'duration':0, 'position':u"", 'volume':0, 'playlist_display':u"", 'playlist_position':u"", 'playlist_count':0, 'bitrate':u"", 'type':u""}
 
 	def status_spop(self):
 		# Try to get status from SPOP daemon
@@ -552,7 +554,7 @@ class RaspDac_Display:
 				spot_status_string = self.spotclient.read_until("\n").strip()
 			except:
 				logging.debug("Could not get status from SPOP daemon")
-				return { 'state':u"stop", 'artist':u"", 'title':u"", 'album':u"", 'current':0, 'duration':0, 'position':u"", 'volume':0, 'playlist_display':u"", 'playlist_position':0, 'playlist_count':0, 'bitrate':u"", 'type':u""}
+				return { 'state':u"stop", 'artist':u"", 'title':u"", 'album':u"", 'current':0, 'remaining':u"", 'duration':0, 'position':u"", 'volume':0, 'playlist_display':u"", 'playlist_position':0, 'playlist_count':0, 'bitrate':u"", 'type':u""}
 
 		spot_status = json.loads(spot_status_string)
 
@@ -590,14 +592,17 @@ class RaspDac_Display:
 			# if duration is not available, then suppress its display
 			if int(duration) > 0:
 				timepos = time.strftime("%M:%S", time.gmtime(int(current))) + "/" + time.strftime("%M:%S", time.gmtime(int(duration)))
+				remaining = time.strftime("%M:%S", time.gmtime(int(duration - current)))
+
 			else:
 				timepos = time.strftime("%M:%S", time.gmtime(int(current)))
+				remaining = timepos
 
 			playlist_display = "{0}/{1}".format(playlist_position, playlist_count)
 
-			return { 'state':u"play", 'artist':artist, 'title':title, 'album':album, 'current':current, 'duration':duration, 'position':timepos, 'volume':volume, 'playlist_display':playlist_display, 'playlist_position':playlist_position, 'playlist_count':playlist_count, 'bitrate':bitrate, 'type':tracktype }
+			return { 'state':u"play", 'artist':artist, 'title':title, 'album':album, 'remaining':remaining, 'current':current, 'duration':duration, 'position':timepos, 'volume':volume, 'playlist_display':playlist_display, 'playlist_position':playlist_position, 'playlist_count':playlist_count, 'bitrate':bitrate, 'type':tracktype }
 	  	else:
-			return { 'state':u"stop", 'artist':u"", 'title':u"", 'album':u"", 'current':0, 'duration':0, 'position':u"", 'volume':0, 'playlist_display':u"", 'playlist_position':0, 'playlist_count':0, 'bitrate':u"", 'type':u""}
+			return { 'state':u"stop", 'artist':u"", 'title':u"", 'album':u"", 'remaining':u"", 'current':0, 'duration':0, 'position':u"", 'volume':0, 'playlist_display':u"", 'playlist_position':0, 'playlist_count':0, 'bitrate':u"", 'type':u""}
 
 
 	def status_lms(self):
@@ -626,7 +631,7 @@ class RaspDac_Display:
 				lms_status = self.lmsplayer.get_mode()
 			except (socket_error, AttributeError, IndexError):
 				logging.debug("Could not get status from LMS daemon")
-				return { 'state':u"stop", 'artist':u"", 'title':u"", 'album':u"", 'current':0, 'duration':0, 'position':u"", 'volume':0, 'playlist_display':u"", 'playlist_position':0, 'playlist_count':0, 'bitrate':u"", 'type':u"", 'current_time':u""}
+				return { 'state':u"stop", 'artist':u"", 'title':u"", 'album':u"", 'remaining':u"", 'current':0, 'duration':0, 'position':u"", 'volume':0, 'playlist_display':u"", 'playlist_position':0, 'playlist_count':0, 'bitrate':u"", 'type':u"", 'current_time':u""}
 
 
 	  	if lms_status == "play":
@@ -670,13 +675,15 @@ class RaspDac_Display:
 			# if duration is not available, then suppress its display
 			if int(duration) > 0:
 				timepos = time.strftime("%M:%S", time.gmtime(int(current))) + "/" + time.strftime("%M:%S", time.gmtime(int(duration)))
+				remaining = time.strftime("%M:%S", time.gmtime(int(duration - current)))
+
 			else:
 				timepos = time.strftime("%M:%S", time.gmtime(int(current)))
+				remaining = timepos
 
-
-			return { 'state':u"play", 'artist':artist, 'title':title, 'album':album, 'current':current, 'duration':duration, 'position':timepos, 'volume':volume, 'playlist_display':playlist_display,'playlist_position':playlist_position, 'playlist_count':playlist_count, 'bitrate':bitrate, 'type':tracktype }
+			return { 'state':u"play", 'artist':artist, 'title':title, 'album':album, 'remaining':remaining, 'current':current, 'duration':duration, 'position':timepos, 'volume':volume, 'playlist_display':playlist_display,'playlist_position':playlist_position, 'playlist_count':playlist_count, 'bitrate':bitrate, 'type':tracktype }
 	  	else:
-			return { 'state':u"stop", 'artist':u"", 'title':u"", 'album':u"", 'current':0, 'duration':0, 'position':u"", 'volume':0, 'playlist_display':u"", 'playlist_position':0, 'playlist_count':0, 'bitrate':u"", 'type':u""}
+			return { 'state':u"stop", 'artist':u"", 'title':u"", 'album':u"", 'remaining':u"", 'current':0, 'duration':0, 'position':u"", 'volume':0, 'playlist_display':u"", 'playlist_position':0, 'playlist_count':0, 'bitrate':u"", 'type':u""}
 
 
 	def status(self):
