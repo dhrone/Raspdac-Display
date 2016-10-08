@@ -522,7 +522,7 @@ class RaspDac_Display:
 			# if duration is not available, then suppress its display
 			if int(duration) > 0:
 				timepos = time.strftime("%M:%S", time.gmtime(int(current))) + "/" + time.strftime("%M:%S", time.gmtime(int(duration)))
-				remaining = time.strftime("%M:%S", time.gmtime(int(duration - current)))
+				remaining = time.strftime("%M:%S", time.gmtime( int(duration) - int(current) ) )
 			else:
 				timepos = time.strftime("%M:%S", time.gmtime(int(current)))
 				remaining = timepos
@@ -592,7 +592,7 @@ class RaspDac_Display:
 			# if duration is not available, then suppress its display
 			if int(duration) > 0:
 				timepos = time.strftime("%M:%S", time.gmtime(int(current))) + "/" + time.strftime("%M:%S", time.gmtime(int(duration)))
-				remaining = time.strftime("%M:%S", time.gmtime(int(duration - current)))
+				remaining = time.strftime("%M:%S", time.gmtime(int(duration) - int(current) ) )
 
 			else:
 				timepos = time.strftime("%M:%S", time.gmtime(int(current)))
@@ -675,7 +675,7 @@ class RaspDac_Display:
 			# if duration is not available, then suppress its display
 			if int(duration) > 0:
 				timepos = time.strftime("%M:%S", time.gmtime(int(current))) + "/" + time.strftime("%M:%S", time.gmtime(int(duration)))
-				remaining = time.strftime("%M:%S", time.gmtime(int(duration - current)))
+				remaining = time.strftime("%M:%S", time.gmtime(int(duration) - int(current) ) )
 
 			else:
 				timepos = time.strftime("%M:%S", time.gmtime(int(current)))
