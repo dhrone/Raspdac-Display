@@ -14,7 +14,6 @@ The RaspDac is a Raspberry Pi audio player using a Sabre ES9023 DAC and capable 
    ```
    git clone https://github.com/dhrone/Raspdac-Display
    cd Raspdac-Display
-   git checkout working
    ```
 
    Place RaspDacDisplay.py and WinstarOled.py in a directory of your choice (e.g. /usr/local/bin/.  Add RaspDacDisplay.py to /etc/rc.local to automate its startup on reboot.  It is a good idea to delay its start-up to allow the system to come up completely before it attempts to start.  The following examples uses a 20 second delay.
@@ -179,7 +178,6 @@ Follow the instructions found at http://www.runeaudio.com/documentation/troubles
 ```
 git clone https://github.com/dhrone/Raspdac-Display
 cd Raspdac-Display
-git checkout working
 ```
 
 * Step seven.  Place files in their appropriate directories and register the service with systemctl to enable autostart.  All of these commands should be issued from within the Raspdac_Display directory that you retrieved from github.
@@ -251,7 +249,6 @@ The following steps require that your Raspdac be powered up and connected to you
    ```
    git clone https://github.com/dhrone/Raspdac-Display
    cd Raspdac-Display
-   git checkout working
    ```
 
 
