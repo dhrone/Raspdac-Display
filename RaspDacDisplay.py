@@ -12,6 +12,7 @@ from pylms import server
 from pylms import player
 import telnetlib
 from socket import error as socket_error
+import traceback
 
 try:
 	import RPi.GPIO as GPIO
@@ -43,6 +44,10 @@ DISPLAY_HEIGHT = 2 # the number of lines on the display
 # This is where the log file will be written
 LOGFILE='/var/log/RaspDacDisplay.log'
 #LOGFILE='./log/RaspDacDisplay.log'
+
+STATUSLOGFILE='/var/log/RaspDacDisplayStatus.log'
+#STATUSLOGFILE='./log/RaspDacDisplayStatus.log'
+STATUSLOGGING = False
 
 # Adjust this setting to localize the time display to your region
 TIMEZONE="US/Eastern"
@@ -443,6 +448,14 @@ class RaspDac_Display:
 				# After the alloted number of attempts did not succeed in connecting
 				logging.debug("Unable to connect to LMS service on startup")
 
+		global STATUSLOGGING
+		if STATUSLOGGING:
+			try:
+				self.statusfile = open(STATUSLOGFILE, 'a')
+			except:
+				logging.warning("Status data logging requested but could not open {0}".format(STATUSLOGFILE))
+				STATUSLOGGING = False
+
 
 	def status_mpd(self):
 		# Try to get status from MPD daemon
@@ -790,6 +803,11 @@ class RaspDac_Display:
 		status['current_time'] = current_time
 		status['current_ip'] = current_ip
 
+		# if logging of the status data has been requested record the current status
+		if STATUSLOGGING:
+			self.statusfile.write(str(status)+'\n')
+			self.statusfile.flush()
+
 		return status
 
 
@@ -896,17 +914,24 @@ if __name__ == '__main__':
 	signal.signal(signal.SIGTERM, sigterm_handler)
 	logging.basicConfig(format='%(asctime)s:%(levelname)s:%(message)s', filename=LOGFILE, level=LOGLEVEL)
 
+	# As cstatus will get referenced inside of handlecaughtexceptions, make sure it has a valid value
+	cstatus = { }
+
 	# Move unhandled exception messages to log file
-	def handleuncaughtexcpetions(exc_type, exc_value, exc_traceback):
+	def handleuncaughtexceptions(exc_type, exc_value, exc_traceback):
 		if issubclass(exc_type, KeyboardInterrupt):
 			sys.__excepthook__(exc_type, exc_value, exc_traceback)
 			return
 
 		logging.error("Uncaught exception", exc_info=(exc_type, exc_value, exc_traceback))
+		if len(cstatus) > 0:
+			logging.error("Player status at exception")
+			logging.error(str(cstatus))
+
 		sys.__excepthook__(exc_type, exc_value, exc_traceback)
 
 
-	sys.excepthook = handleuncaughtexcpetions
+	sys.excepthook = handleuncaughtexceptions
 
 	logging.info("Raspdac display starting...")
 
@@ -924,8 +949,15 @@ if __name__ == '__main__':
 	except:
 		#e = sys.exc_info()[0]
 		#logging.critical("Received exception: %s" % e)
-		e = sys.exc_info()[0]
-		logging.critical("Caught {0}. Unable to initialize RaspDac Display.  Exiting...".format(e))
+#		e = sys.exc_info()[0]
+		logging.critical("Unable to initialize RaspDac Display.  Exiting...")
+		logging.critical("Exception", exc_info = (sys.exc_info()[0], sys.exc_info()[1], sys.exc_info()[2]))
+
+		if DISPLAY_INSTALLED:
+			GPIO.cleanup()
+		else:
+			curses.endwin()
+
 		sys.exit(0)
 
 	try:
@@ -1299,6 +1331,9 @@ if __name__ == '__main__':
 			rd.spotclient.close()
 		except:
 			pass
+
+		if STATUSLOGGING:
+			rd.statusfile.close()
 
 		time.sleep(2)
 		dq.put(["",""])
