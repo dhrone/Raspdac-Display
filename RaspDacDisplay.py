@@ -42,8 +42,8 @@ DISPLAY_WIDTH = 16 # the character width of the display
 DISPLAY_HEIGHT = 2 # the number of lines on the display
 
 # This is where the log file will be written
-LOGFILE='/var/log/RaspDacDisplay.log'
-#LOGFILE='./log/RaspDacDisplay.log'
+#LOGFILE='/var/log/RaspDacDisplay.log'
+LOGFILE='./log/RaspDacDisplay.log'
 
 STATUSLOGFILE='/var/log/RaspDacDisplayStatus.log'
 #STATUSLOGFILE='./log/RaspDacDisplayStatus.log'
@@ -64,16 +64,16 @@ LOGLEVEL=logging.INFO
 #Configure which music services to monitor
 # For Volumio and RuneAudio MPD and SPOP should be enabled and LMS disabled
 # for Max2Play if you are using the Logitech Music Service, then LMS should be enabled
-MPD_ENABLED = True
+MPD_ENABLED = False
 MPD_SERVER = "localhost"
 MPD_PORT = 6600
 
-SPOP_ENABLED = True
+SPOP_ENABLED = False
 SPOP_SERVER = "localhost"
 SPOP_PORT = 6602
 
-LMS_ENABLED = False
-LMS_SERVER = "localhost"
+LMS_ENABLED = True
+LMS_SERVER = "max2play.local"
 LMS_PORT = 9090
 LMS_USER = ""
 LMS_PASSWORD = ""
@@ -84,7 +84,8 @@ LMS_PASSWORD = ""
 #       possible that your player has decided to join it, instead of the LMS on Max2Play
 #       To fix this, go to the SqueezeServer interface and change move the player to the
 #       correct server.
-LMS_PLAYER = "00:01:02:aa:bb:cc"
+#LMS_PLAYER = "00:01:02:aa:bb:cc"
+LMS_PLAYER = "b8:27:eb:a0:a4:01"
 
 # Page Definitions
 # See Page Format.txt for instructions and examples on how to modify your display settings
@@ -672,6 +673,24 @@ class RaspDac_Display:
 				tracktype = u""
 
 			playlist_display = "{0}/{1}".format(playlist_position, playlist_count)
+			# If the track count is greater than 1, we are playing from a playlist and can display track position and track count
+			if self.lmsplayer.playlist_track_count() > 1:
+				playlist_display = "{0}/{1}".format(playlist_position, playlist_count)
+			# if the track count is exactly 1, this is either a short playlist or it is streaming
+			elif self.lmsplayer.playlist_track_count() == 1:
+				try:
+					# if streaming
+					if self.lmsplayer.playlist_get_info()[0]['duration'] == 0.0:
+						playlist_display = "Streaming"
+					# it really is a short playlist
+					else:
+						playlist_display = "{0}/{1}".format(playlist_position, playlist_count)
+				except KeyError:
+					logging.debug("In LMS couldn't get valid track information")
+					playlist_display = u""
+			else:
+				logging.debug("In LMS track length is <= 0")
+				playlist_display = u""
 
 		  	# since we are returning the info as a JSON formatted return, convert
 		  	# any None's into reasonable values
