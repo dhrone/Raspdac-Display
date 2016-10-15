@@ -26,6 +26,9 @@ from threading import Thread
 import signal
 import sys
 
+# import page definitions from pages.py
+import pages
+
 STARTUP_MSG = "Raspdac\nStarting"
 
 HESITATION_TIME = 2.5 # Amount of time in seconds to hesistate before scrolling
@@ -86,291 +89,7 @@ LMS_PASSWORD = ""
 #       correct server.
 LMS_PLAYER = "00:01:02:aa:bb:cc"
 
-# Page Definitions
-# See Page Format.txt for instructions and examples on how to modify your display settings
-PAGES_Play = {
-  'name':"Play",
-  'pages':
-    [
-      {
-        'name':"Album",
-        'duration':10,
-		'hidewhenempty':'any',
-        'hidewhenemptyvars': [ "album" ],
-        'lines': [
-          {
-            'name':"top",
-            'variables': [ "album" ],
-            'format':"Album: {0}",
-            'justification':"left",
-            'scroll':True
-          },
-          {
-            'name':"bottom",
-            'variables': [ "playlist_display", "position" ],
-            'format':"{0} {1}",
-            'justification':"left",
-            'scroll':False
-          }
-        ]
-      },
-      {
-        'name':"Blank",
-        'duration':0.5,
-        'lines': [
-          {
-            'name':"top",
-            'format':"",
-          },
-          {
-            'name':"bottom",
-            'variables': [ "playlist_display", "position" ],
-            'format':"{0} {1}",
-            'justification':"left",
-            'scroll':False
-          }
-        ]
-      },
-      {
-        'name':"Artist",
-        'duration':10,
-		'hidewhenempty':'any',
-        'hidewhenemptyvars': [ "artist" ],
-        'lines': [
-          {
-            'name':"top",
-            'variables': [ "artist" ],
-            'format':"Artist: {0}",
-            'justification':"left",
-            'scroll':True
-          },
-          {
-            'name':"bottom",
-            'variables': [ "playlist_display", "position" ],
-            'format':"{0} {1}",
-            'justification':"left",
-            'scroll':False
-          }
-        ]
-      },
-      {
-        'name':"Blank",
-        'duration':0.5,
-        'lines': [
-          {
-            'name':"top",
-            'format':"",
-          },
-          {
-            'name':"bottom",
-            'variables': [ "playlist_display", "position" ],
-            'format':"{0} {1}",
-            'justification':"left",
-            'scroll':False
-          }
-        ]
-      },
-      {
-        'name':"Title",
-        'duration':10,
-		'hidewhenempty':'any',
-        'hidewhenemptyvars': [ "title" ],
-        'lines': [
-          {
-            'name':"top",
-            'variables': [ "title" ],
-            'format':"Title: {0}",
-            'justification':"left",
-            'scroll':True
-          },
-          {
-            'name':"bottom",
-            'variables': [ "playlist_display", "position" ],
-            'format':"{0} {1}",
-            'justification':"left",
-            'scroll':False
-          }
-        ]
-      },
-      {
-        'name':"Blank",
-        'duration':0.5,
-        'lines': [
-          {
-            'name':"top",
-            'format':"",
-          },
-          {
-            'name':"bottom",
-            'variables': [ "playlist_display", "position" ],
-            'format':"{0} {1}",
-            'justification':"left",
-            'scroll':False
-          }
-        ]
-      },
-      {
-        'name':"Meta Data",
-        'duration':10,
-		'hidewhenempty':'any',
-        'hidewhenemptyvars': [ "bitrate", "type" ],
-        'lines': [
-          {
-            'name':"top",
-            'variables': [ "bitrate", "type" ],
-            'format':"Rate: {0}, Type: {1}",
-            'justification':"left",
-            'scroll':True
-          },
-          {
-            'name':"bottom",
-            'variables': [ "playlist_display", "position" ],
-            'format':"{0} {1}",
-            'justification':"left",
-            'scroll':False
-          }
-        ]
-      }
 
-    ]
-}
-
-PAGES_Stop = {
-  'name':"Stop",
-  'pages':
-    [
-      {
-        'name':"Ready",
-        'duration':12,
-        'lines': [
-          {
-            'name':"top",
-            'variables': [ ],
-            'format':"Ready",
-            'justification':"center",
-            'scroll':False
-          },
-          {
-            'name':"bottom",
-            'variables': [ "current_time" ],
-            'format':"{0}",
-            'justification':"center",
-            'scroll':False
-          }
-        ]
-      },
-      {
-        'name':"IPADDR",
-        'duration':1.5,
-        'lines': [
-          {
-            'name':"top",
-            'variables': [ "current_ip" ],
-            'format':"{0}",
-            'justification':"center",
-            'scroll':False
-          },
-          {
-            'name':"bottom",
-            'variables': [ "current_time" ],
-            'format':"{0}",
-            'justification':"center",
-            'scroll':False
-          }
-        ]
-      },
-      {
-        'name':"SYSTEMVARS",
-        'duration':10,
-        'lines': [
-          {
-            'name':"top",
-            'variables': [ "current_tempc", "disk_availp" ],
-            'format':"Temp: {0}c / Disk {1}% full",
-            'justification':"left",
-            'scroll':True
-          },
-          {
-            'name':"bottom",
-            'variables': [ "current_time" ],
-            'format':"{0}",
-            'justification':"center",
-            'scroll':False
-          }
-        ]
-      }
-    ]
-}
-
-ALERT_Volume = {
- 	'name':"Volume",
-	'alert': {
-  		'variable': "volume",
-		'type': "change",
-		'suppressonstatechange':True,
-		'coolingperiod': 0
-	},
-	'interruptible':False,
-	'pages': [
-		{
-			'name':"Volume",
-        	'duration':2,
-        	'lines': [
-          		{
-            		'name':"top",
-            		'variables': [ ],
-            		'format':"Volume",
-            		'justification':"center",
-            		'scroll':False
-          		},
-          		{
-            		'name':"bottom",
-            		'variables': [ "volume" ],
-            		'format':"{0}",
-            		'justification':"center",
-            		'scroll':False
-          		}
-        	]
-      	}
-    ]
-}
-
-ALERT_TempTooHigh = {
- 	'name':"TempTooHigh",
-	'alert': {
-  		'variable': "current_tempc",
-		'type': "above",
-		'values': [ 85 ],
-		'suppressonstatechange':False,
-		'coolingperiod': 30
-	},
-	'interruptible':False,
-	'pages': [
-		{
-			'name':"TempTooHigh",
-        	'duration':8,
-        	'lines': [
-          		{
-            		'name':"top",
-            		'variables': [ ],
-            		'format':"Temp Too High",
-            		'justification':"center",
-            		'scroll':False
-          		},
-          		{
-            		'name':"bottom",
-            		'variables': [ "current_tempc" ],
-            		'format':"Temp: {0}c",
-            		'justification':"center",
-            		'scroll':False
-          		}
-        	]
-      	}
-    ]
-}
-
-
-ALERT_LIST = [ ALERT_Volume, ALERT_TempTooHigh ]
 
 class RaspDac_Display:
 
@@ -988,7 +707,7 @@ if __name__ == '__main__':
 		alert_mode = False
 
 		# Reset all of the alert message cooling values
-		for pl in ALERT_LIST:
+		for pl in pages.ALERT_LIST:
 			pl['cooling_expires'] = 0
 
 		# Initialize previous state
@@ -1004,7 +723,7 @@ if __name__ == '__main__':
 
 			alert_check = False
 			# Check to see if any alerts are triggered
-			for pl in ALERT_LIST:
+			for pl in pages.ALERT_LIST:
 
 
 				# Check to see if alert is in its cooling period
@@ -1088,10 +807,10 @@ if __name__ == '__main__':
 
 					# Set to new display page
 					if state != "play":
-						current_pages = PAGES_Stop
+						current_pages = pages.PAGES_Stop
 					# else display the PAGES_Playing pages
 					else:
-						current_pages = PAGES_Play
+						current_pages = pages.PAGES_Play
 
 			# if page has expired then move to the next page
 			if page_expires < time.time():
