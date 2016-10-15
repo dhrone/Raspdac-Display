@@ -188,6 +188,7 @@ class RaspDac_Display:
 				self.client.connect(MPD_SERVER, MPD_PORT)
 				m_status=self.client.status()
 				m_currentsong = self.client.currentsong()
+				playlist_info = self.client.playlistinfo()
 			except:
 				logging.debug("Could not get status from MPD daemon")
 				return { 'state':u"stop", 'artist':u"", 'title':u"", 'album':u"", 'current':0, 'remaining':u"", 'duration':0, 'position':u"", 'volume':0, 'playlist_display':u"", 'playlist_position':0, 'playlist_count':0, 'bitrate':u"", 'type':u"" }
@@ -259,13 +260,15 @@ class RaspDac_Display:
 				timepos = time.strftime("%M:%S", time.gmtime(int(current)))
 				remaining = timepos
 
-			# If the variable nextsong exists, we are playing from a playlist and can display track position and track count
-			try:
-				nextsong = m_status['nextsong']
-				playlist_display = "{0}/{1}".format(playlist_position, playlist_count)
-			except:
-				# else we are not in a playlist and can assume we are streaming
-				playlist_display = "Streaming"
+			# If playlist is length 1 and the song playing is from an http source it is streaming
+			if playlist_count == 1:
+				if playlist_info['file'][:4] == "http":
+					playlist_display = "Streaming"
+				else:
+					playlist_display = "{0}/{1}".format(playlist_position, playlist_count)
+			else:
+					playlist_display = "{0}/{1}".format(playlist_position, playlist_count)
+
 
 			return { 'state':u"play", 'artist':artist, 'title':title, 'album':album, 'remaining':remaining, 'current':current, 'duration':duration, 'position':timepos, 'volume':volume, 'playlist_display':playlist_display, 'playlist_position':playlist_position, 'playlist_count':playlist_count, 'bitrate':self.bitrate, 'type':tracktype }
 	  	else:
