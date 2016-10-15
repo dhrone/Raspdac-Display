@@ -724,7 +724,7 @@ class RaspDac_Display:
 		if MPD_ENABLED:
 			status = self.status_mpd()
 		else:
-			status = { 'state': "stopped" }
+			status = { 'state':u"stop", 'artist':u"", 'title':u"", 'album':u"", 'remaining':u"", 'current':0, 'duration':0, 'position':u"", 'volume':0, 'playlist_display':u"", 'playlist_position':0, 'playlist_count':0, 'bitrate':u"", 'type':u""}
 
 		# If MPD is stopped
 		if status.get('state') != "play":
@@ -733,7 +733,7 @@ class RaspDac_Display:
 			if SPOP_ENABLED:
 				status = self.status_spop()
 			else:
-				status = { 'state': "stopped" }
+				status = { 'state':u"stop", 'artist':u"", 'title':u"", 'album':u"", 'remaining':u"", 'current':0, 'duration':0, 'position':u"", 'volume':0, 'playlist_display':u"", 'playlist_position':0, 'playlist_count':0, 'bitrate':u"", 'type':u""}
 
 			# If SPOP is stopped
 			if status.get('state') != "play":
@@ -742,7 +742,7 @@ class RaspDac_Display:
 				if LMS_ENABLED:
 					status = self.status_lms()
 				else:
-					status = { 'state': "stopped" }
+					status = { 'state':u"stop", 'artist':u"", 'title':u"", 'album':u"", 'remaining':u"", 'current':0, 'duration':0, 'position':u"", 'volume':0, 'playlist_display':u"", 'playlist_position':0, 'playlist_count':0, 'bitrate':u"", 'type':u""}
 
 
 		# Add system variables
