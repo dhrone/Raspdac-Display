@@ -6,15 +6,15 @@ PAGES_Play = {
   'pages':
     [
       {
-        'name':"Artist",
-        'duration':8,
+        'name':"Album",
+        'duration':10,
 		'hidewhenempty':'any',
-        'hidewhenemptyvars': [ "artist" ],
+        'hidewhenemptyvars': [ "album" ],
         'lines': [
           {
             'name':"top",
-            'variables': [ "artist" ],
-            'format':"{0}",
+            'variables': [ "album" ],
+            'format':"Album: {0}",
             'justification':"left",
             'scroll':True
           },
@@ -29,7 +29,7 @@ PAGES_Play = {
       },
       {
         'name':"Blank",
-        'duration':0.25,
+        'duration':0.5,
         'lines': [
           {
             'name':"top",
@@ -45,15 +45,15 @@ PAGES_Play = {
         ]
       },
       {
-        'name':"Album",
-        'duration':8,
+        'name':"Artist",
+        'duration':10,
 		'hidewhenempty':'any',
-        'hidewhenemptyvars': [ "album" ],
+        'hidewhenemptyvars': [ "artist" ],
         'lines': [
           {
             'name':"top",
-            'variables': [ "album" ],
-            'format':"{0}",
+            'variables': [ "artist" ],
+            'format':"Artist: {0}",
             'justification':"left",
             'scroll':True
           },
@@ -68,7 +68,7 @@ PAGES_Play = {
       },
       {
         'name':"Blank",
-        'duration':0.25,
+        'duration':0.5,
         'lines': [
           {
             'name':"top",
@@ -107,7 +107,7 @@ PAGES_Play = {
       },
       {
         'name':"Blank",
-        'duration':0.25,
+        'duration':0.5,
         'lines': [
           {
             'name':"top",
@@ -121,7 +121,30 @@ PAGES_Play = {
             'scroll':False
           }
         ]
+      },
+      {
+        'name':"Meta Data",
+        'duration':10,
+		'hidewhenempty':'any',
+        'hidewhenemptyvars': [ "bitrate", "type" ],
+        'lines': [
+          {
+            'name':"top",
+            'variables': [ "bitrate", "type" ],
+            'format':"Rate: {0}, Type: {1}",
+            'justification':"left",
+            'scroll':True
+          },
+          {
+            'name':"bottom",
+            'variables': [ "playlist_display", "position" ],
+            'format':"{0} {1}",
+            'justification':"left",
+            'scroll':False
+          }
+        ]
       }
+
     ]
 }
 
@@ -131,7 +154,7 @@ PAGES_Stop = {
     [
       {
         'name':"Ready",
-        'duration':15,
+        'duration':12,
         'lines': [
           {
             'name':"top",
@@ -151,6 +174,26 @@ PAGES_Stop = {
         ]
       },
       {
+        'name':"IPADDR",
+        'duration':1.5,
+        'lines': [
+          {
+            'name':"top",
+            'variables': [ "current_ip" ],
+            'format':"{0}",
+            'justification':"center",
+            'scroll':False
+          },
+          {
+            'name':"bottom",
+            'variables': [ "current_time" ],
+            'format':"{0}",
+            'justification':"center",
+            'scroll':False
+          }
+        ]
+      },
+      {
         'name':"SYSTEMVARS",
         'duration':10,
         'lines': [
@@ -163,8 +206,7 @@ PAGES_Stop = {
           },
           {
             'name':"bottom",
-            'variables': [ "current_time_formatted" ],
-            'strftime':"%a %b %-m %H:%M",
+            'variables': [ "current_time" ],
             'format':"{0}",
             'justification':"center",
             'scroll':False
