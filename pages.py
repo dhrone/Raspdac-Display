@@ -92,7 +92,7 @@ PAGES_Play = {
           {
             'name':"top",
             'variables': [ "title" ],
-            'format':"Title: {0}",
+            'format':"{0}",
             'justification':"left",
             'scroll':True
           },
