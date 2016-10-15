@@ -27,6 +27,7 @@ A line consists of ...
   name: The name of the line
   variable: An array of variables in to-be-displayed order
   format: A format string e.g "Artist {0} / Title {1}".
+  strftime: A strftime style format string used to format current_time_formatted (see strftime.org for examples)
   justification: How should the line be justified ("left", "right", "center")?
   scroll:  Sets whether scrolling is enabled for the line or not (True, False).
 
@@ -55,6 +56,8 @@ The variable values that you use within your PageLists must be returned by the s
   'disk_avail' - Amount of bytes current left on root partition
   'disk_availp' - Percentage of disk used on root partition
   'current_time' - The current local time (assuming TIMEZONE is set correctly)
+  'current_time_formatted - The current local time formatted using strftime variable (if present)
+  'current_date' - The current date (assuming TIMEZONE is set correctly)
   'current_ip' - The current IP address of the system
 
 For Play and Stop states, the system walks through each of the Pages in the current state's page file, displaying page each for that pages duration.  If the state of the system changes while a Page is being displayed, the display immediately switches to display the first page of the new state.

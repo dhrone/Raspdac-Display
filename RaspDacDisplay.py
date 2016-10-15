@@ -467,9 +467,11 @@ class RaspDac_Display:
 		# Add system variables
 
 		if TIME24HOUR == True:
-			current_time = moment.utcnow().timezone(TIMEZONE).format("HH:mm").strip()
+			current_time = moment.utcnow().timezone(TIMEZONE).strftime("%H:%M").strip()
+			current_time_sec = moment.utcnow().timezone(TIMEZONE).strftime("%H:%M:%S").strip()
 		else:
-			current_time = moment.utcnow().timezone(TIMEZONE).format("h:m a").strip()
+			current_time = moment.utcnow().timezone(TIMEZONE).strftime("%-I:%M %p").strip()
+			current_time_sec = moment.utcnow().timezone(TIMEZONE).strftime("%-I:%M:%S %p").strip()
 
 		current_ip = commands.getoutput("ip -4 route get 1 | head -1 | cut -d' ' -f8 | tr -d '\n'").strip()
 
@@ -538,6 +540,7 @@ class RaspDac_Display:
 		status['disk_avail'] = self.avail
 		status['disk_availp'] = self.availp
 		status['current_time'] = current_time
+		status['current_time_sec'] = current_time
 		status['current_ip'] = current_ip
 
 		# if logging of the status data has been requested record the current status
@@ -649,7 +652,11 @@ def sigterm_handler(_signo, _stack_frame):
 
 if __name__ == '__main__':
 	signal.signal(signal.SIGTERM, sigterm_handler)
-	logging.basicConfig(format='%(asctime)s:%(levelname)s:%(message)s', filename=LOGFILE, level=LOGLEVEL)
+	try:
+		logging.basicConfig(format='%(asctime)s:%(levelname)s:%(message)s', filename=LOGFILE, level=LOGLEVEL)
+	except IOError:
+		logging.basicConfig(format='%(asctime)s:%(levelname)s:%(message)s', filename="RaspDacDisplay.log", level=LOGLEVEL)
+
 
 	# As cstatus will get referenced inside of handlecaughtexceptions, make sure it has a valid value
 	cstatus = { }
@@ -993,6 +1000,16 @@ if __name__ == '__main__':
 					variables = current_line['variables']
 				except KeyError:
 					variables = []
+
+				# If you have specified a strftime format on the line
+				# now use it to add a formatted time to cstatus
+				try:
+					strftime = current_line['strftime']
+				except:
+					# Use 12 hour clock as default
+					strftime = "%-I:%M %p"
+
+				cstatus['current_time_formatted'] = moment.utcnow().timezone(TIMEZONE).strftime(strftime).strip()
 
 				format = current_line['format']
 

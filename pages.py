@@ -165,7 +165,8 @@ PAGES_Stop = {
           },
           {
             'name':"bottom",
-            'variables': [ "current_time" ],
+            'variables': [ "current_time_formatted" ],
+            'strftime':"%a %b %-m %H:%M",
             'format':"{0}",
             'justification':"center",
             'scroll':False

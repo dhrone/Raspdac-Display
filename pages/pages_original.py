@@ -11,7 +11,7 @@ PAGES_Play = {
           {
             'name':"top",
             'variables': [ "artist" ],
-            'format':"Artist: {0}",
+            'format':"{0}",
             'justification':"left",
             'scroll':True
           },
@@ -33,7 +33,7 @@ PAGES_Play = {
           {
             'name':"top",
             'variables': [ "title" ],
-            'format':"Title: {0}",
+            'format':"{0}",
             'justification':"left",
             'scroll':True
           },
@@ -41,7 +41,7 @@ PAGES_Play = {
             'name':"bottom",
             'variables': [ "position" ],
             'format':"{0}",
-            'justification':"left",
+            'justification':"center",
             'scroll':False
           }
         ]
