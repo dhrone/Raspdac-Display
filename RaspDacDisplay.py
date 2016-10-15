@@ -182,6 +182,7 @@ class RaspDac_Display:
 		try:
 			m_status = self.client.status()
 			m_currentsong = self.client.currentsong()
+			playlist_info = self.client.playlistinfo()
 		except:
 			# Attempt to reestablish connection to daemon
 			try:
@@ -262,7 +263,7 @@ class RaspDac_Display:
 
 			# If playlist is length 1 and the song playing is from an http source it is streaming
 			if playlist_count == 1:
-				if playlist_info['file'][:4] == "http":
+				if playlist_info[0]['file'][:4] == "http":
 					playlist_display = "Streaming"
 				else:
 					playlist_display = "{0}/{1}".format(playlist_position, playlist_count)
