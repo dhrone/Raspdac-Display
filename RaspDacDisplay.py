@@ -272,7 +272,7 @@ class RaspDac_Display:
 				# if radioname is None then this is coming from a playlist (e.g. not streaming)
 				if r_status['radioname'] == None:
 					playlist_display = "{0}/{1}".format(playlist_position, playlist_count)
-				else:=
+				else:
 					playlist_display = "Streaming"
 					# if artist is empty, place radioname in artist field
 					if artist is None:
