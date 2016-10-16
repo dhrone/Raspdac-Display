@@ -252,10 +252,10 @@ class RaspDac_Display:
 						# if not continue to estimate
 						current = int(time.time() - self.timesongstarted)
 				else:
+					self.currentelapsed = int(r_status['elapsed'])
+					current = self.currentelapsed
+					self.timesongstarted = time.time() - current
 					self.currentsong = title
-					self.timesongstarted = time.time()
-					self.currentelapsed = 0
-					current = 0
 
 			if actPlayer == 'Spotify':
 				bitrate = "320 kbps"
@@ -272,8 +272,11 @@ class RaspDac_Display:
 				# if radioname is None then this is coming from a playlist (e.g. not streaming)
 				if r_status['radioname'] == None:
 					playlist_display = "{0}/{1}".format(playlist_position, playlist_count)
-				else:
+				else:=
 					playlist_display = "Streaming"
+					# if artist is empty, place radioname in artist field
+					if artist is None:
+						artist = r_status['radioname']
 
 				try:
 					audio = r_status['audio'].split(':')
