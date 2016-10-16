@@ -244,7 +244,7 @@ class RaspDac_Display:
 				if self.currentsong == title:
 
 					# Did elapsed change?  This can happen if someone fast forwards the song, etc.
-					if self.currentelapsed != r_status['elapsed']:
+					if self.currentelapsed != int(r_status['elapsed']):
 						self.currentelapsed = int(r_status['elapsed'])
 						current = self.currentelapsed
 						self.timesongstarted = time.time() - current
