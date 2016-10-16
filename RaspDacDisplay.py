@@ -223,7 +223,7 @@ class RaspDac_Display:
 				logging.debug("Could not get status from REDIS daemon")
 				return { 'state':u"stop", 'artist':u"", 'title':u"", 'album':u"", 'current':0, 'remaining':u"", 'duration':0, 'position':u"", 'volume':0, 'playlist_display':u"", 'playlist_position':0, 'playlist_count':0, 'bitrate':u"", 'type':u"" }
 
-		state = m_status.get('state')
+		state = r_status.get('state')
 		if state == "play":
 			artist = r_status.get('currentartist')
 			title = r_status.get('currentsong')
@@ -626,7 +626,7 @@ class RaspDac_Display:
 						status = { 'state':u"stop", 'artist':u"", 'title':u"", 'album':u"", 'remaining':u"", 'current':0, 'duration':0, 'position':u"", 'volume':0, 'playlist_display':u"", 'playlist_position':0, 'playlist_count':0, 'bitrate':u"", 'type':u""}
 		else:
 			status = { 'state':u"stop", 'artist':u"", 'title':u"", 'album':u"", 'remaining':u"", 'current':0, 'duration':0, 'position':u"", 'volume':0, 'playlist_display':u"", 'playlist_position':0, 'playlist_count':0, 'bitrate':u"", 'type':u""}
-			
+
 
 		# Add system variables
 
