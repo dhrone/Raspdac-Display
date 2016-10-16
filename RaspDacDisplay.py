@@ -218,8 +218,8 @@ class RaspDac_Display:
 		except:
 			# Attempt to reestablish connection to daemon
 			try:
-				self.client.redisconnect(REDIS_SERVER, REDIS_PORT, REDIS_PASSWORD)
-				r_status=self.client.status()
+				self.redisclient = redis.Redis(REDIS_SERVER, REDIS_PORT, REDIS_PASSWORD)
+				r_status = json.loads(self.redisclient.get('act_player_info'))
 			except:
 				logging.debug("Could not get status from REDIS daemon")
 				return { 'state':u"stop", 'artist':u"", 'title':u"", 'album':u"", 'current':0, 'remaining':u"", 'duration':0, 'position':u"", 'volume':0, 'playlist_display':u"", 'playlist_position':0, 'playlist_count':0, 'bitrate':u"", 'type':u"" }
@@ -235,7 +235,7 @@ class RaspDac_Display:
 
 			# if transitioning state from stopped to playing
 			if self.timesongstarted == 0:
-				self.currentelapsed = r_status['elapsed']
+				self.currentelapsed = int(r_status['elapsed'])
 				current = self.currentelapsed
 				self.timesongstarted = time.time() - current
 				self.currentsong = title
@@ -245,7 +245,7 @@ class RaspDac_Display:
 
 					# Did elapsed change?  This can happen if someone fast forwards the song, etc.
 					if self.currentelapsed != r_status['elapsed']:
-						self.currentelapsed = r_status['elapsed']
+						self.currentelapsed = int(r_status['elapsed'])
 						current = self.currentelapsed
 						self.timesongstarted = time.time() - current
 					else:
