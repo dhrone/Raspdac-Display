@@ -111,6 +111,7 @@ class RaspDac_Display:
 		# used with Redis to try to figure out how long the song has been playing
 		self.timesongstarted = 0
 		self.currentsong = ""
+		self.currentelapsed = 0
 
 		self.tempc = 0.0
 		self.tempf = 0.0
@@ -236,14 +237,23 @@ class RaspDac_Display:
 			if self.timesongstarted == 0:
 				self.timesongstarted = time.time()
 				self.currentsong = title
+				self.currentelapsed = 0
 				current = 0
 			else:
 				# Are we still playing the same title?
 				if self.currentsong == title:
-					current = int(time.time() - self.timesongstarted)
+
+					# Did elapsed change?  This can happen if someone fast forwards the song, etc.
+					if self.currentelapsed != r_status['elapsed']:
+						self.currentelapsed = r_status['elapsed']
+						current = self.currentelapsed
+					else:
+						# if not continue to estimate
+						current = int(time.time() - self.timesongstarted)
 				else:
 					self.currentsong = title
 					self.timesongstarted = time.time()
+					self.currentelapsed = 0
 					current = 0
 
 			if actPlayer == 'Spotify':
