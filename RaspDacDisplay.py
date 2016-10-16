@@ -596,31 +596,37 @@ class RaspDac_Display:
 
 	def status(self):
 
+		# If you are using Rune
+		if RUNE_ENABLED:
+			status = self.status_redis()
+		elif MPD_ENABLED or SPOP_ENABLED or LMS_ENABLED:
 
-		# Try MPD daemon first
-		if MPD_ENABLED:
-			status = self.status_mpd()
-		else:
-			status = { 'state':u"stop", 'artist':u"", 'title':u"", 'album':u"", 'remaining':u"", 'current':0, 'duration':0, 'position':u"", 'volume':0, 'playlist_display':u"", 'playlist_position':0, 'playlist_count':0, 'bitrate':u"", 'type':u""}
-
-		# If MPD is stopped
-		if status.get('state') != "play":
-
-			# Try SPOP
-			if SPOP_ENABLED:
-				status = self.status_spop()
+			if MPD_ENABLED:
+				# Try MPD daemon
+				status = self.status_mpd()
 			else:
-				status = { 'state':u"stop", 'artist':u"", 'title':u"", 'album':u"", 'remaining':u"", 'current':0, 'duration':0, 'position':u"", 'volume':0, 'playlist_display':u"", 'playlist_position':0, 'playlist_count':0, 'bitrate':u"", 'type':u""}
+				status = { 'state':u"stop", 'artist':u"", 'title':u"", 'album':u"", 'remaining':u"", 'current':0, 'duration':0, 'position':u"", 'volume':0, 'playlist_display':u"", 'playlist_position':0, 'playlist_count':0, 'bitrate':u"", 'type':u"" }
 
-			# If SPOP is stopped
+			# If MPD is stopped
 			if status.get('state') != "play":
 
-				# Try LMS
-				if LMS_ENABLED:
-					status = self.status_lms()
+				# Try SPOP
+				if SPOP_ENABLED:
+					status = self.status_spop()
 				else:
 					status = { 'state':u"stop", 'artist':u"", 'title':u"", 'album':u"", 'remaining':u"", 'current':0, 'duration':0, 'position':u"", 'volume':0, 'playlist_display':u"", 'playlist_position':0, 'playlist_count':0, 'bitrate':u"", 'type':u""}
 
+				# If SPOP is stopped
+				if status.get('state') != "play":
+
+					# Try LMS
+					if LMS_ENABLED:
+						status = self.status_lms()
+					else:
+						status = { 'state':u"stop", 'artist':u"", 'title':u"", 'album':u"", 'remaining':u"", 'current':0, 'duration':0, 'position':u"", 'volume':0, 'playlist_display':u"", 'playlist_position':0, 'playlist_count':0, 'bitrate':u"", 'type':u""}
+		else:
+			status = { 'state':u"stop", 'artist':u"", 'title':u"", 'album':u"", 'remaining':u"", 'current':0, 'duration':0, 'position':u"", 'volume':0, 'playlist_display':u"", 'playlist_position':0, 'playlist_count':0, 'bitrate':u"", 'type':u""}
+			
 
 		# Add system variables
 
