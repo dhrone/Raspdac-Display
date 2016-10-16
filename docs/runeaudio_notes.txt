@@ -1,0 +1,162 @@
+Rune uses redis and exposes player state through the key act_player_info
+
+act_player_info is not updated continuously so I do not currently have a way to query elapsed time for a song
+act_player_info appears to be a JSON formatted object
+
+act_player_info has different keys within it depending upon key actPlayer
+
+actPlayer == Spotify
+"{\"state\":\"play\",\"repeat\":\"0\",\"random\":\"0\",\"playlistlength\":11,\"currentartist\":\"Radiohead\",\"currentalbum\":\"Kid A\",\"currentsong\":\"Everything In Its Right Place\",\"song\":0,\"elapsed\":0,\"time\":251,\"volume\":100,\"song_percent\":0,\
+"uri\":\"spotify:track:5AiNZnMDCWwujIENPj9PV9\",\"popularity\":58,\"playlist\":\"20\",\"actPlayer\":\"Spotify\"}"
+
+"{\"state\":\"play\",\"repeat\":\"0\",\"random\":\"0\",\"playlistlength\":11,\"currentartist\":\"Radiohead\",\"currentalbum\":\"Kid A\",\"currentsong\":\"The National Anthem\",\"song\":2,\"elapsed\":0,\"time\":352,\"volume\":100,\"song_percent\":0,
+\"uri\":\"spotify:track:01UstUPbzPgq2MNp6h0tVo\",\"popularity\":51,\"playlist\":\"20\",\"actPlayer\":\"Spotify\"}"
+
+Valid Variables { state, repeat, random, playlistlength, currentartist, currentalbum, currentsong, song, elapsed, time, volume, song_percent, uri, popularity, playlist, actPlayer }
+
+actPlayer = MPD
+
+-- Playing from a local file
+"{\"volume\":\"77\",\"repeat\":\"0\",\"random\":\"0\",\"single\":\"0\",\"consume\":\"0\",\"playlist\":\"175\",\"playlistlength\":\"7\",\"mixrampdb\":\"0.000000\",\"state\":\"play\",\"song\":\"1\",\"songid\":\"130\",\"time\":\"401\",\"elapsed\":\"0\",\
+"bitrate\":\"80\",\"audio\":\"44100:24:2\",\"nextsong\":\"2\",\"nextsongid\":\"131\",\"OK\":null,\"song_percent\":0,\"audio_sample_rate\":\"44.1\",\"audio_sample_depth\":\"24\",\"audio_channels\":\"Stereo\",\"changed\":\"player\",\
+"currentartist\":\"Thomas Dolby\",\"currentsong\":\"The Flat Earth\",\"currentalbum\":\"The Flat Earth\",\"fileext\":\"mp3\",\"radioname\":null,\"actPlayer\":\"MPD\"}"
+
+-- Playing from a web radio
+"{\"volume\":\"77\",\"repeat\":\"0\",\"random\":\"0\",\"single\":\"0\",\"consume\":\"0\",\"playlist\":\"179\",\"playlistlength\":\"1\",\"mixrampdb\":\"0.000000\",\"state\":\"play\",\"song\":\"0\",\"songid\":\"136\",\"time\":\"0\",\"elapsed\":\"0\",\
+"bitrate\":\"128\",\"audio\":\"44100:24:2\",\"OK\":null,\"song_percent\":0,\"audio_sample_rate\":\"44.1\",\"audio_sample_depth\":\"24\",\"audio_channels\":\"Stereo\",\"changed\":\"playlist\\nchan\",\
+"currentartist\":null,\"currentsong\":\"Dave Grusin - Love Theme\",\"currentalbum\":null,\"fileext\":\"com\\/ALBUMRADIOZEN\",\"radioname\":\"ALBUMRADIOZEN\",\"actPlayer\":\"MPD\"}"
+
+-- Playing a DLNA track
+"{\"volume\":\"77\",\"repeat\":\"0\",\"random\":\"0\",\"single\":\"0\",\"consume\":\"0\",\"playlist\":\"27\",\"playlistlength\":\"1\",\"mixrampdb\":\"0.000000\",\"state\":\"play\",\"song\":\"0\",\"songid\":\"5\",\"time\":\"275\",\"elapsed\":\"0\",\
+"bitrate\":\"0\",\"audio\":\"44100:24:2\",\"OK\":null,\"song_percent\":0,\"audio_sample_rate\":\"44.1\",\"audio_sample_depth\":\"24\",\"audio_channels\":\"Stereo\",\"changed\":\"player\",\
+"currentartist\":\"Laurie Anderson\",\"currentsong\":\"From the Air\",\"currentalbum\":\"Big Science\",\"fileext\":\"mp3?bitrate=320\",\"radioname\":null,\"actPlayer\":\"MPD\"}"
+
+Valid Variables { state, repeat, random, single, consume, mixrampdb, bitrate, audio, audio_sample_rate, audio_sample_depth, audio_channels, nextsong, nextsongid, OK, changed, fileext, radioname, playlistlength, currentartist, currentalbum, currentsong, song, elapsed, time, volume, song_percent, uri, popularity, playlist, actPlayer }
+
+actPlayer = Airplay
+"{\"currentartist\":\"The Blue Van\",\"currentsong\":\"Stop Thinking of Yourself\",\"currentalbum\":\"Man Up\",\"artwork\":\"cover-cff99f4f26971d4e72f32f4d5522ccfd.jpg\",\"genre\":\"Rock\",\"comment\":\"\",\"volume\":\"100\",\"random\":\"0\",\"single\":\"0\",\
+"consume\":\"0\",\"playlist\":\"1\",\"playlistlength\":\"1\",\"state\":\"play\",\"time\":\"0\",\"elapsed\":\"0\",\"song_percent\":\"100\",\"actPlayer\":\"Airplay\"}"
+
+Valid Variables { currentartist, currentsong, currentalbum, artwork, genre, comment, volume, random, single, consume, playlist, playlistlength, state, time, elapsed, song_percent, actPlayer }
+
+
+state - player state
+  Possible values
+    play - player playing
+    stop - player stoppped
+
+
+repeat - replay playlist
+  Binary
+    1 - replay the playlist when at the end
+    0 - no replay at end of playlist
+
+random - randomized play from the playlist
+  Binary
+    1 - randomized play from the playlist
+    0 - play the playlist in order
+
+single - no clue
+  integer or binary
+
+consume - no clue
+  integer or binary
+
+mixrampdb - current threshold for song overlap
+  float value of the db
+
+bitrate - current bitrate of the playing song.  Since we don't get real-time updates, this will be the bitrate at the very start of the song
+  integer in kbps
+
+audio - formatted string of the sample rate, sample depth, and number of channels
+  string
+    e.g. 44100:24:2
+
+audio_sample_rate - the sample rate of the current song in kbps
+  float
+    e.g. 44.1
+
+audio_sample_depth - the depth of the sample for the current song in bits
+  integer
+    e.g. 24
+
+audio_channels - Indicates whether the song is stereo or mono
+  string
+    e.g. Stereo
+    e.g. Mono
+
+nextsong - the song that will be played next in the playlist.  Not included for streaming content
+  integer
+
+nextsongid - the id of the song that will be played next in the playlist.  Not included for streaming content
+  integer
+
+OK - no clue
+
+changed - appears to indicate what caused the ndis data to be updated
+  string
+    e.g. player
+    e.g. playlist
+
+fileext - file type
+  string
+    e.g. mp3
+    e.g. com\/ALBUMRADIOZEN
+    e.g. com\/groovesalad-128-mp3
+
+radioname - name of the streaming service if current song is from a streaming radio
+  string
+    e.g. ALBUMRADIOZEN
+
+playlistlength - how long is the current playlist
+  Integer from 0 to n
+
+currentartist - Name of the artist for the song at the current position within the playlist
+    string
+
+currentalbum - Name of the album for the song at current position within the playlist
+  string
+
+currentsong - Name of the current song at the current position within the playlist
+  string
+
+artwork - Name of the coverart file (not sure how this is retrieved)
+  string
+
+genre - Type of music being played
+  string
+    e.g. Rock
+
+comment - Comment about music
+  string
+
+song - the position of the song within the current playlist
+  integer
+
+elapsed - the amount of time the current song has been playing in seconds (NOT UPDATED IN REALTIME)
+  integer
+
+time - the length of the current song in seconds
+  integer
+
+volume - the current volume setting
+  integer from 0 to 100
+
+song_percent - the percentage of the current song that has been played
+  integer from 0 to 100
+
+uri - the uri for the current playing song
+  string
+    e.g. spotify:track:01UstUPbzPgq2MNp6h0tVo\
+
+popularity - the reported popularity of the current song
+  integer range unknown
+
+playlist - appears to be a song kind of id of the playlist
+  integer
+
+actPlayer - shows which music service is currently being used
+  string with the following observed values
+    e.g. Spotify
+    e.g. Airplay
+    e.g. MPD

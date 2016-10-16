@@ -58,8 +58,8 @@ TIME24HOUR=False
 #TIMEZONE="Europe/Paris"
 
 # Logging level
-#LOGLEVEL=logging.DEBUG
-LOGLEVEL=logging.INFO
+LOGLEVEL=logging.DEBUG
+#LOGLEVEL=logging.INFO
 #LOGLEVEL=logging.WARNING
 #LOGLEVEL=logging.CRITICAL
 
@@ -67,11 +67,11 @@ LOGLEVEL=logging.INFO
 #Configure which music services to monitor
 # For Volumio and RuneAudio MPD and SPOP should be enabled and LMS disabled
 # for Max2Play if you are using the Logitech Music Service, then LMS should be enabled
-MPD_ENABLED = True
+MPD_ENABLED = False
 MPD_SERVER = "localhost"
 MPD_PORT = 6600
 
-SPOP_ENABLED = True
+SPOP_ENABLED = False
 SPOP_SERVER = "localhost"
 SPOP_PORT = 6602
 
@@ -90,6 +90,13 @@ LMS_PASSWORD = ""
 LMS_PLAYER = "00:01:02:aa:bb:cc"
 
 
+# If you are using RuneAudio you can pull the information from the REDIS database that RuneAudio maintains
+RUNE_ENABLED = True
+REDIS_SERVER = "localhost"
+REDIS_PORT = 6379
+REDIS_PASSWORD = ""
+
+
 
 class RaspDac_Display:
 
@@ -100,6 +107,10 @@ class RaspDac_Display:
 		self.tempreadexpired = 0
 		self.diskreadexpired = 0
 		self.ratereadexpired = 0
+
+		# used with Redis to try to figure out how long the song has been playing
+		self.timesongstarted = 0
+		self.currentsong = ""
 
 		self.tempc = 0.0
 		self.tempf = 0.0
@@ -113,6 +124,28 @@ class RaspDac_Display:
 		ATTEMPTS=3
 		# Will try to connect multiple times
 
+		global RUNE_ENABLED
+		if RUNE_ENABLED:
+			# This tries to pull in the redis module which is only used right now for RuneAudio.
+			# If it is not present, REDIS will be disabled
+			try:
+				import redis
+				for i in range (1,ATTEMPTS):
+					try:
+						# Try to connect to REDIS service
+						self.redisclient = redis.Redis(REDIS_SERVER, REDIS_PORT, REDIS_PASSWORD)
+						break
+					except:
+						time.sleep(2)
+				else:
+					# After the alloted number of attempts did not succeed in connecting
+					logging.warning("Unable to connect to REDIS service on startup")
+
+			except ImportError:
+				logging.warning("Redis requested but module not found.")
+				RUNE_ENABLED = False
+
+
 		if MPD_ENABLED:
 			for i in range (1,ATTEMPTS):
 				self.client = MPDClient(use_unicode=True)
@@ -125,7 +158,7 @@ class RaspDac_Display:
 					time.sleep(2)
 			else:
 				# After the alloted number of attempts did not succeed in connecting
-				logging.debug("Unable to connect to MPD service on startup")
+				logging.warning("Unable to connect to MPD service on startup")
 
 		if SPOP_ENABLED:
 			# Now attempting to connect to the Spotify daemon
@@ -139,7 +172,7 @@ class RaspDac_Display:
 					time.sleep(2)
 			else:
 				# After the alloted number of attempts did not succeed in connecting
-				logging.debug("Unable to connect to Spotify service on startup")
+				logging.warning("Unable to connect to Spotify service on startup")
 
 		if LMS_ENABLED:
 			for i in range (1,ATTEMPTS):
@@ -165,7 +198,7 @@ class RaspDac_Display:
 					time.sleep(2)
 			else:
 				# After the alloted number of attempts did not succeed in connecting
-				logging.debug("Unable to connect to LMS service on startup")
+				logging.warning("Unable to connect to LMS service on startup")
 
 		global STATUSLOGGING
 		if STATUSLOGGING:
@@ -174,6 +207,127 @@ class RaspDac_Display:
 			except:
 				logging.warning("Status data logging requested but could not open {0}".format(STATUSLOGFILE))
 				STATUSLOGGING = False
+
+
+	def status_redis(self):
+		# Try to get status from MPD daemon
+
+		try:
+			r_status = json.loads(self.redisclient.get('act_player_info'))
+		except:
+			# Attempt to reestablish connection to daemon
+			try:
+				self.client.redisconnect(REDIS_SERVER, REDIS_PORT, REDIS_PASSWORD)
+				r_status=self.client.status()
+			except:
+				logging.debug("Could not get status from REDIS daemon")
+				return { 'state':u"stop", 'artist':u"", 'title':u"", 'album':u"", 'current':0, 'remaining':u"", 'duration':0, 'position':u"", 'volume':0, 'playlist_display':u"", 'playlist_position':0, 'playlist_count':0, 'bitrate':u"", 'type':u"" }
+
+		state = m_status.get('state')
+		if state == "play":
+			artist = r_status.get('currentartist')
+			title = r_status.get('currentsong')
+			album = r_status.get('currentalbum')
+			volume = int(r_status.get('volume'))
+			actPlayer = r_status.get('actPlayer')
+			duration = int(r_status.get('time'))
+
+			# if transitioning state from stopped to playing
+			if self.timesongstarted == 0:
+				self.timesongstarted = time.time()
+				self.currentsong = title
+				current = 0
+			else:
+				# Are we still playing the same title?
+				if self.currentsong == title:
+					current = int(time.time() - self.timesongstarted)
+				else:
+					self.currentsong = title
+					self.timesongstarted = time.time()
+					current = 0
+
+			if actPlayer == 'Spotify':
+				bitrate = "320 kbps"
+				playlist_position = int(r_status.get('song'))+1
+				playlist_count = int(r_status.get('playlistlength'))
+				playlist_display = "{0}/{1}".format(playlist_position, playlist_count)
+				tracktype = "Spotify"
+
+			elif actPlayer == 'MPD':
+				playlist_position = int(r_status.get('song'))+1
+				playlist_count = int(r_status.get('playlistlength'))
+				bitrate = "{0} kbps".format(r_status.get('bitrate'))
+
+				# if radioname is None then this is coming from a playlist (e.g. not streaming)
+				if r_status['radioname'] == None:
+					playlist_display = "{0}/{1}".format(playlist_position, playlist_count)
+				else:
+					playlist_display = "Streaming"
+
+				try:
+					audio = r_status['audio'].split(':')
+					if len(audio) == 3:
+						sample = round(float(audio[0])/1000,1)
+					 	bits = audio[1]
+					 	if audio[2] == '1':
+							channels = 'Mono'
+					 	elif audio[2] == '2':
+						 	channels = 'Stereo'
+					 	elif int(audio[2]) > 2:
+						 	channels = 'Multi'
+					 	else:
+						 	channels = u""
+
+				 	 	if channels == u"":
+						 	tracktype = "{0} bit, {1} kHz".format(bits, sample)
+					 	else:
+					 		tracktype = "{0}, {1} bit, {2} kHz".format(channels, bits, sample)
+					else:
+						# If audio information not available just send that MPD is the source
+						tracktype = u"MPD"
+				except KeyError:
+					tracktype = u"MPD"
+
+
+			elif actPlayer == 'Airplay':
+				playlist_position = 1
+				playlist_count = 1
+				bitrate = ""
+				tracktype = u"Airplay"
+				playlist_display = "Streaming"
+
+			else:
+				# Unexpected player type
+				logging.debug("Unexpected player type {0} discovered".format(actPlayer))
+				playlist_position = 1
+				playlist_count = 1
+				bitrate = ""
+				tracktype = actPlayer
+				playlist_display = "Streaming"
+
+			# since we are returning the info as a JSON formatted return, convert
+			# any None's into reasonable values
+			if artist is None: artist = u""
+			if title is None: title = u""
+			if album is None: album = u""
+			if current is None: current = 0
+			if volume is None: volume = 0
+			if bitrate is None: bitrate = u""
+			if tracktype is None: tracktype = u""
+			if duration is None: duration = 0
+
+			# if duration is not available, then suppress its display
+			if int(duration) > 0:
+				timepos = time.strftime("%M:%S", time.gmtime(int(current))) + "/" + time.strftime("%M:%S", time.gmtime(int(duration)))
+				remaining = time.strftime("%M:%S", time.gmtime( int(duration) - int(current) ) )
+			else:
+				timepos = time.strftime("%M:%S", time.gmtime(int(current)))
+				remaining = timepos
+
+			return { 'state':u"play", 'artist':artist, 'title':title, 'album':album, 'remaining':remaining, 'current':current, 'duration':duration, 'position':timepos, 'volume':volume, 'playlist_display':playlist_display, 'playlist_position':playlist_position, 'playlist_count':playlist_count, 'bitrate':bitrate, 'type':tracktype }
+	  	else:
+			self.timesongstarted = 0
+			return { 'state':u"stop", 'artist':u"", 'title':u"", 'album':u"", 'remaining':u"", 'current':0, 'duration':0, 'position':u"", 'volume':0, 'playlist_display':u"", 'playlist_position':u"", 'playlist_count':0, 'bitrate':u"", 'type':u""}
 
 
 	def status_mpd(self):
@@ -470,12 +624,17 @@ class RaspDac_Display:
 
 		# Add system variables
 
-		if TIME24HOUR == True:
-			current_time = moment.utcnow().timezone(TIMEZONE).strftime("%H:%M").strip()
-			current_time_sec = moment.utcnow().timezone(TIMEZONE).strftime("%H:%M:%S").strip()
-		else:
-			current_time = moment.utcnow().timezone(TIMEZONE).strftime("%-I:%M %p").strip()
-			current_time_sec = moment.utcnow().timezone(TIMEZONE).strftime("%-I:%M:%S %p").strip()
+		try:
+			if TIME24HOUR == True:
+				current_time = moment.utcnow().timezone(TIMEZONE).strftime("%H:%M").strip()
+				current_time_sec = moment.utcnow().timezone(TIMEZONE).strftime("%H:%M:%S").strip()
+			else:
+				current_time = moment.utcnow().timezone(TIMEZONE).strftime("%-I:%M %p").strip()
+				current_time_sec = moment.utcnow().timezone(TIMEZONE).strftime("%-I:%M:%S %p").strip()
+		except ValueError:
+			# Don't know why but on exit, the moment code is occasionally throwing a ValueError
+			current_time = "00:00"
+			current_time_sec = "00:00:00"
 
 		current_ip = commands.getoutput("ip -4 route get 1 | head -1 | cut -d' ' -f8 | tr -d '\n'").strip()
 
