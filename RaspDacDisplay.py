@@ -235,10 +235,10 @@ class RaspDac_Display:
 
 			# if transitioning state from stopped to playing
 			if self.timesongstarted == 0:
-				self.timesongstarted = time.time()
+				self.currentelapsed = r_status['elapsed']
+				current = self.currentelapsed
+				self.timesongstarted = time.time() - current
 				self.currentsong = title
-				self.currentelapsed = 0
-				current = 0
 			else:
 				# Are we still playing the same title?
 				if self.currentsong == title:
@@ -247,6 +247,7 @@ class RaspDac_Display:
 					if self.currentelapsed != r_status['elapsed']:
 						self.currentelapsed = r_status['elapsed']
 						current = self.currentelapsed
+						self.timesongstarted = time.time() - current
 					else:
 						# if not continue to estimate
 						current = int(time.time() - self.timesongstarted)
