@@ -143,7 +143,7 @@ PAGES_Stop = {
           {
             'name':"bottom",
             'variables': [ "current_time_formatted" ],
-            'strftime':"%a %b %-m %H:%M",
+            'strftime':"%a %b %-d %H:%M",
             'format':"{0}",
             'justification':"center",
             'scroll':False
@@ -164,7 +164,7 @@ PAGES_Stop = {
           {
             'name':"bottom",
             'variables': [ "current_time_formatted" ],
-            'strftime':"%a %b %-m %H:%M",
+            'strftime':"%a %b %-d %H:%M",
             'format':"{0}",
             'justification':"center",
             'scroll':False
