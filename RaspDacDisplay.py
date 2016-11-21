@@ -186,7 +186,7 @@ class RaspDac_Display:
 					players = self.lmsserver.get_players()
 					for p in players:
 						### Need to find out how to get the MAC address from player
-						if p.get_ref() == LMS_PLAYER:
+						if p.get_ref().lower() == LMS_PLAYER.lower():
 							self.lmsplayer = p
 							break
 					if self.lmsplayer is None:
@@ -524,7 +524,7 @@ class RaspDac_Display:
 				players = self.lmsserver.get_players()
 				for p in players:
 					### Need to find out how to get the MAC address from player
-					if p.get_ref() == LMS_PLAYER:
+					if p.get_ref().lower() == LMS_PLAYER.lower():
 						self.lmsplayer = p
 						break
 				if self.lmsplayer is None:
