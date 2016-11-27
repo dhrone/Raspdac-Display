@@ -161,11 +161,12 @@ Follow the instructions found at http://www.runeaudio.com/documentation/troubles
   ```
   pacman -Sy python2-pip
   ```
-   * D. Add the moment, pylms and python-mpd2 packages.
+   * D. Add the moment, pylms, python-mpd2 and redis packages.
   ```
   pip2 install moment
   pip2 install pylms
   pip2 install python-mpd2
+  pip2 install redis
   ```
 
     If you receive an error message when running the pip2 commands, you may need to repair the distutils installation.  This can be done by explicitly installing ez_setup.py.
@@ -186,6 +187,7 @@ cd Raspdac-Display
      cp oled.service /usr/lib/systemd/system/
      cp RaspDacDisplay.py /usr/local/bin/
      cp Winstar_GraphicOLED.py /usr/local/bin/
+     cp pages.py /usr/local/bin
      systemctl enable oled.service
      ```
      Note: you will be overwriting the official version of the rune_shutdown command.  If you attempt to pull the latest RuneAudio UI from github, it will fail unless you stash the change first.
