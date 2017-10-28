@@ -448,14 +448,14 @@ class RaspDac_Display:
 
 		try:
 			self.spotclient.write("status\n")
-			spot_status_string = self.spotclient.read_until("\n").strip()
+			spot_status_string = self.spotclient.read_until("}").strip()
 		except:
 			# Try to reestablish connection to daemon
 			try:
 				self.spotclient = telnetlib.Telnet(SPOP_SERVER,SPOP_PORT)
 				self.spotclient.read_until("\n")
 				self.spotclient.write("status\n")
-				spot_status_string = self.spotclient.read_until("\n").strip()
+				spot_status_string = self.spotclient.read_until("}").strip()
 			except:
 				logging.debug("Could not get status from SPOP daemon")
 				return { 'state':u"stop", 'artist':u"", 'title':u"", 'album':u"", 'current':0, 'remaining':u"", 'duration':0, 'position':u"", 'volume':0, 'playlist_display':u"", 'playlist_position':0, 'playlist_count':0, 'bitrate':u"", 'type':u""}
