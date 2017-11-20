@@ -1,3 +1,6 @@
+# NO LONGER MAINTAINED
+This project is no longer being maintained.  I will still try to respond to issue requests but will not commit signficant development effort to resolving them.  There is a new version of the project at http://github.com/dhrone/pydPiper that you may want to consider.  Unlike Raspdac-Display which is text-based, pydPiper is a graphical system and is able to handle a wider variety of display designs.
+
 # Raspdac-Display
 An alternate display program for the Raspdac from Audiophonics which uses a Winstar OLED 16x2 display
 
