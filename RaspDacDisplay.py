@@ -656,7 +656,9 @@ class RaspDac_Display:
 			current_time = "00:00"
 			current_time_sec = "00:00:00"
 
-		current_ip = commands.getoutput("ip -4 route get 1 | head -1 | cut -d' ' -f8 | tr -d '\n'").strip()
+		#current_ip = commands.getoutput("ip -4 route get 1 | head -1 | cut -d' ' -f8 | tr -d '\n'").strip()
+		current_ip = commands.getoutput("ip -4 route get 1 | head -1 | cut -d' ' -f7 | tr -d '\n'").strip()
+		#current_ip = commands.getoutput("hostname -I | awk '{print $1}'")
 
 
 		# Read Temperature from Pi's on-board temperature sensor once every 20 seconds
